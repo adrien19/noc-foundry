@@ -1,0 +1,23 @@
+
+---
+kind: sources
+name: my-http
+type: http
+baseUrl: https://example.com
+
+---
+kind: tools
+name: hello-http
+type: http
+source: my-http
+description: hello tool
+method: GET
+path: /hello
+
+---
+kind: toolsets
+name: inspection-workflow
+description: Broken workflow.
+promptset: missing-promptset
+tools:
+  - hello-http

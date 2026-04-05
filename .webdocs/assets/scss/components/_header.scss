@@ -1,0 +1,22 @@
+.td-navbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(135deg, var(--nf-navbar-start) 0%, var(--nf-navbar-end) 100%);
+  box-shadow: 0 10px 35px rgba(16, 32, 45, 0.22);
+}
+
+.td-navbar .navbar-brand__name {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--nf-navbar-text);
+}
+
+.td-navbar .nav-link {
+  color: var(--nf-navbar-text);
+}
+
+.td-navbar .nav-link:hover,
+.td-navbar .nav-link:focus,
+.td-navbar .nav-link.active {
+  color: #ffffff;
+}

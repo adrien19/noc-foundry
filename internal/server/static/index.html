@@ -1,0 +1,127 @@
+<!--
+  Copyright 2025 Google LLC
+  Modifications Copyright 2026 Adrien Ndikumana
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NOCFoundry</title>
+    <link rel="icon" href="/ui/static/assets/favicon.ico?v=20260405" sizes="any" />
+    <link rel="icon" href="/ui/static/assets/nocfoundry-mark.svg?v=20260405" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ui/static/assets/favicon-32x32.png?v=20260405" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/ui/static/assets/favicon-16x16.png?v=20260405" />
+    <link rel="apple-touch-icon" href="/ui/static/assets/apple-touch-icon.png?v=20260405" />
+    <link rel="stylesheet" href="/ui/static/css/app.css" />
+  </head>
+  <body data-page="overview">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar__top">
+          <a class="brand" href="/ui/">
+            <img class="brand__logo" src="/ui/static/assets/noc-foundry-logo.svg" alt="NOCFoundry" />
+            <div class="brand__copy">
+              <div class="brand__title">NOCFoundry</div>
+              <div class="brand__subtitle">Network operations platform</div>
+            </div>
+          </a>
+          <button id="toggle-sidebar-button" class="sidebar__toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true">Collapse</button>
+        </div>
+
+        <nav class="nav">
+          <a class="nav__link nav__link--active" href="/ui/" title="Overview">
+            <span class="nav__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 10.5L12 3L21 10.5V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 21V12H15V21" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="nav__label">Overview</span>
+          </a>
+          <a class="nav__link" href="/ui/tools" title="Tools">
+            <span class="nav__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 12H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="7" r="2" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="17" r="2" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            <span class="nav__label">Tools</span>
+          </a>
+          <a class="nav__link" href="/ui/toolsets" title="Toolsets">
+            <span class="nav__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="10" width="18" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="16" width="18" height="4" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            <span class="nav__label">Toolsets</span>
+          </a>
+        </nav>
+
+        <div class="auth-session">
+          <div class="auth-session__header">
+            <div class="panel__label">Session</div>
+          </div>
+          <div id="auth-session-status" class="auth-session__status">UI login disabled</div>
+          <div id="auth-session-user" class="auth-session__user hidden"></div>
+          <div class="auth-session__actions">
+            <button id="auth-login-button" class="auth-session__button button button--primary hidden" type="button" aria-label="Sign in" title="Sign in">
+              <span class="auth-session__button-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 8L12 4L16 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13V18C5 19.1046 5.89543 20 7 20H17C18.1046 20 19 19.1046 19 18V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="auth-session__button-label">Sign in</span>
+            </button>
+            <button id="auth-logout-button" class="auth-session__button button hidden" type="button" aria-label="Sign out" title="Sign out">
+              <span class="auth-session__button-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 16L12 20L16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 11V6C5 4.89543 5.89543 4 7 4H17C18.1046 4 19 4.89543 19 6V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="auth-session__button-label">Sign out</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="page-header">
+          <div>
+            <h1>NOCFoundry</h1>
+            <p class="muted">Production-grade static UI for browsing, inspecting, and executing network operation tools.</p>
+          </div>
+        </header>
+
+        <div id="auth-banner" class="panel panel--subtle hidden"></div>
+
+        <section class="overview-grid">
+          <article class="panel">
+            <div class="panel__label">Tools</div>
+            <h2>Browse and run tools</h2>
+            <p>Inspect parameters, set request headers, execute tools, and inspect results with formatted output.</p>
+            <a class="button button--primary" href="/ui/tools">Open tools</a>
+          </article>
+
+          <article class="panel">
+            <div class="panel__label">Toolsets</div>
+            <h2>Discover grouped capabilities</h2>
+            <p>Search toolsets, inspect the tools they expose, and navigate quickly to operational functionality.</p>
+            <a class="button" href="/ui/toolsets">Open toolsets</a>
+          </article>
+
+          <article class="panel panel--wide">
+            <div class="panel__label">Why this UI</div>
+            <p>
+              This interface is optimized for network operators and developers who need an efficient, readable, and safe
+              way to inspect existing NOCFoundry capabilities without relying on a hacky prototype layout.
+            </p>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/ui/static/js/app.js"></script>
+  </body>
+</html>

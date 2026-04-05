@@ -1,0 +1,16 @@
+auth:
+  endpointAuth:
+    api:
+      enabled: true
+      authServices: ["noc-keycloak"]
+      audience: ${NOCFOUNDRY_BASE_URL:http://127.0.0.1:5000}/api
+    mcp:
+      enabled: true
+      authServices: ["noc-keycloak"]
+      audience: ${NOCFOUNDRY_BASE_URL:http://127.0.0.1:5000}/mcp
+  ui:
+    enabled: true
+    authService: noc-keycloak
+    clientId: ${KEYCLOAK_UI_CLIENT_ID:noc-foundry-ui}
+    scopes: ["openid", "profile", "email"]
+    redirectPath: /ui/auth/callback

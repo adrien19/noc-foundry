@@ -1,0 +1,18 @@
+.nocfoundry-callout {
+  border-left: 4px solid $clr-info-a10;
+  background: color-mix(in srgb, $clr-info-a20 18%, var(--nf-elevated-bg));
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  color: var(--nf-page-text);
+}
+
+.nocfoundry-callout--warning {
+  border-left-color: $clr-warning-a10;
+  background: color-mix(in srgb, $clr-warning-a20 18%, var(--nf-elevated-bg));
+}
+
+.nocfoundry-callout--success {
+  border-left-color: $clr-success-a10;
+  background: color-mix(in srgb, $clr-success-a20 18%, var(--nf-elevated-bg));
+}

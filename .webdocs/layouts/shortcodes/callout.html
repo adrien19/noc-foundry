@@ -1,0 +1,4 @@
+{{- $kind := .Get 0 | default "note" -}}
+<div class="nocfoundry-callout nocfoundry-callout--{{ $kind }}">
+  {{ .Inner | markdownify }}
+</div>

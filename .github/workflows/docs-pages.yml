@@ -1,0 +1,129 @@
+name: docs-pages
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - ".webdocs/**"
+      - ".github/workflows/docs-pages.yml"
+  pull_request:
+    paths:
+      - ".webdocs/**"
+      - ".github/workflows/docs-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.146.0"
+          extended: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: .webdocs/go.mod
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: .webdocs/package-lock.json
+
+      - name: Install docs dependencies
+        working-directory: .webdocs
+        run: |
+          go mod download
+          npm ci
+
+      - name: Validate docs build
+        run: |
+          ./.webdocs/scripts/build-versioned-site.sh \
+            "https://docs.nocfoundry.dev/dev/" \
+            "$RUNNER_TEMP/nocfoundry-docs-build"
+
+      - name: Prepare deployment metadata
+        if: github.event_name != 'pull_request'
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "TARGET_DIR=dev" >> "$GITHUB_ENV"
+            echo "BASE_URL=https://docs.nocfoundry.dev/dev/" >> "$GITHUB_ENV"
+            echo "PUBLISH_LATEST=false" >> "$GITHUB_ENV"
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "TARGET_DIR=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+            echo "BASE_URL=https://docs.nocfoundry.dev/${GITHUB_REF_NAME}/" >> "$GITHUB_ENV"
+            echo "PUBLISH_LATEST=true" >> "$GITHUB_ENV"
+          else
+            echo "Unsupported ref for docs deployment: ${GITHUB_REF}" >&2
+            exit 1
+          fi
+
+      - name: Build release docs artifact
+        if: github.event_name != 'pull_request'
+        run: |
+          ./.webdocs/scripts/build-versioned-site.sh \
+            "${BASE_URL}" \
+            "$RUNNER_TEMP/nocfoundry-docs-release"
+
+      - name: Publish to gh-pages
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          PAGES_DIR="$RUNNER_TEMP/gh-pages"
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git clone --branch gh-pages --depth 1 "${REPO_URL}" "${PAGES_DIR}"
+          else
+            git clone --depth 1 "${REPO_URL}" "${PAGES_DIR}"
+            cd "${PAGES_DIR}"
+            git checkout --orphan gh-pages
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+            cd -
+          fi
+
+          mkdir -p "${PAGES_DIR}/${TARGET_DIR}"
+          rsync -a --delete "$RUNNER_TEMP/nocfoundry-docs-release/" "${PAGES_DIR}/${TARGET_DIR}/"
+
+          if [[ "${PUBLISH_LATEST}" == "true" ]]; then
+            mkdir -p "${PAGES_DIR}/latest"
+            rsync -a --delete "$RUNNER_TEMP/nocfoundry-docs-release/" "${PAGES_DIR}/latest/"
+          fi
+
+          ./.webdocs/scripts/render-root-index.sh "${PAGES_DIR}"
+          ./.webdocs/scripts/render-versions-json.sh "${PAGES_DIR}"
+
+          echo "docs.nocfoundry.dev" > "${PAGES_DIR}/CNAME"
+          touch "${PAGES_DIR}/.nojekyll"
+
+          cd "${PAGES_DIR}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No docs changes to publish."
+            exit 0
+          fi
+
+          git commit -m "docs: publish ${GITHUB_REF_NAME}"
+          git push origin gh-pages

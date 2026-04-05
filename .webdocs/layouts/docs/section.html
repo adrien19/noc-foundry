@@ -1,0 +1,18 @@
+{{ define "main" }}
+<div class="td-content">
+  {{ partial "navbar-version-selector.html" . }}
+  {{ partial "page-meta-links.html" . }}
+  {{ .Content }}
+
+  {{ if .Pages }}
+  <div class="nocfoundry-section-list">
+    {{ range .Pages.ByWeight }}
+    <article class="nocfoundry-section-list__item">
+      <h2><a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a></h2>
+      {{ with .Description }}<p>{{ . }}</p>{{ end }}
+    </article>
+    {{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ end }}

@@ -1,0 +1,5 @@
+👋 Welcome to the NOCFoundry dev container! You are on our NOCFoundry Contributors image.
+It includes everything to build, run and test the github.com/adrien19/noc-foundry repository.
+
+
+

@@ -1,0 +1,111 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  go-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run Go unit tests
+        run: go test ./cmd/... ./internal/...
+
+  go-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Compile-check all packages
+        run: go test -run '^$' ./...
+
+      - name: Build CLI
+        run: go build -o /tmp/nocfoundry .
+
+      - name: Check CLI version output
+        run: /tmp/nocfoundry --version >/dev/null
+
+  ui-and-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: .webdocs/go.mod
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            .webdocs/package-lock.json
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.146.0"
+          extended: true
+
+      - name: Run UI JS tests
+        run: |
+          npm ci
+          npm run test:ui-js
+
+      - name: Build docs
+        working-directory: .webdocs
+        run: |
+          go mod download
+          npm ci
+          hugo --source . --gc --minify
+
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate server metadata
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("server.json").read_text())
+          assert data["name"] == "io.github.noc-foundry/noc-foundry"
+          assert data["version"]
+          package = data["packages"][0]
+          assert package["registryType"] == "oci"
+          assert package["identifier"] == "ghcr.io/adrien19/noc-foundry:{version}"
+          arg_names = {arg["name"] for arg in package["runtimeArguments"]}
+          required = {"--tools-file", "--tools-files", "--tools-folder", "--server-config", "--validation-config", "--prebuilt"}
+          missing = sorted(required - arg_names)
+          assert not missing, f"missing runtime args: {missing}"
+          PY

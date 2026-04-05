@@ -1,0 +1,91 @@
+@import "components/header";
+@import "components/layout";
+@import "components/search";
+@import "components/sidebar";
+@import "components/typography";
+@import "components/callouts";
+
+:root,
+[data-bs-theme="light"] {
+  --nf-page-bg: #ffffff;
+  --nf-page-text: #171920;
+  --nf-muted-text: #5b5c62;
+  --nf-heading: #21498a;
+  --nf-link: #0060ad;
+  --nf-border: rgba(88, 128, 191, 0.28);
+  --nf-elevated-bg: rgba(255, 255, 255, 0.96);
+  --nf-elevated-shadow: 0 18px 44px rgba(23, 25, 32, 0.08);
+  --nf-page-glow: rgba(88, 128, 191, 0.12);
+  --nf-navbar-start: #171920;
+  --nf-navbar-end: #21498a;
+  --nf-navbar-text: rgba(255, 255, 255, 0.92);
+  --nf-search-bg: rgba(255, 255, 255, 0.12);
+  --nf-search-border: rgba(255, 255, 255, 0.24);
+  --nf-search-placeholder: rgba(255, 255, 255, 0.72);
+}
+
+[data-bs-theme="dark"] {
+  --nf-page-bg: #121212;
+  --nf-page-text: #ffffff;
+  --nf-muted-text: #8e8f93;
+  --nf-heading: #a2b5db;
+  --nf-link: #8ba3d2;
+  --nf-border: rgba(139, 163, 210, 0.22);
+  --nf-elevated-bg: #171920;
+  --nf-elevated-shadow: 0 22px 48px rgba(0, 0, 0, 0.34);
+  --nf-page-glow: rgba(64, 119, 209, 0.16);
+  --nf-navbar-start: #121212;
+  --nf-navbar-end: #21498a;
+  --nf-navbar-text: rgba(255, 255, 255, 0.94);
+  --nf-search-bg: rgba(255, 255, 255, 0.08);
+  --nf-search-border: rgba(255, 255, 255, 0.18);
+  --nf-search-placeholder: rgba(255, 255, 255, 0.7);
+}
+
+html,
+body {
+  background: var(--nf-page-bg);
+  color: var(--nf-page-text);
+}
+
+.td-main {
+  background:
+    radial-gradient(circle at top right, var(--nf-page-glow), transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--nf-page-bg) 84%, #ffffff 16%), var(--nf-page-bg));
+  color: var(--nf-page-text);
+}
+
+.td-content,
+.td-content p,
+.td-content li,
+.td-content td,
+.td-content th,
+.td-page-meta,
+.td-page-meta a {
+  color: var(--nf-page-text);
+}
+
+.nocfoundry-section-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.nocfoundry-section-list__item {
+  border: 1px solid var(--nf-border);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--nf-elevated-bg);
+  box-shadow: var(--nf-elevated-shadow);
+}
+
+.nocfoundry-page-meta {
+  margin-bottom: 1rem;
+}
+
+.td-sidebar,
+.td-sidebar-nav,
+.td-toc,
+.td-page-meta {
+  color: var(--nf-page-text);
+}

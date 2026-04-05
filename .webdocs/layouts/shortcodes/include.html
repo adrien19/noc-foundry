@@ -1,0 +1,5 @@
+{{- $path := .Get 0 -}}
+{{- if not $path -}}
+  {{- errorf "include shortcode requires a file path" -}}
+{{- end -}}
+{{- readFile $path | markdownify -}}

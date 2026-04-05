@@ -1,0 +1,21 @@
+.td-content h1,
+.td-content h2,
+.td-content h3 {
+  letter-spacing: -0.02em;
+  color: var(--nf-heading);
+}
+
+.td-content h1 {
+  color: var(--nf-heading);
+}
+
+.td-content a {
+  text-underline-offset: 0.18em;
+  color: var(--nf-link);
+}
+
+.td-content .lead,
+.td-content .text-body-secondary,
+.td-page-meta .text-body-secondary {
+  color: var(--nf-muted-text) !important;
+}

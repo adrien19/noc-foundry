@@ -1,0 +1,39 @@
+---
+kind: tools
+name: start_validation_run
+type: validation-run-start
+description: >-
+  Submit a validation run and return a run ID immediately.
+
+---
+kind: tools
+name: validation_run_status
+type: validation-run-status
+description: >-
+  Poll status and event history for a validation run.
+
+---
+kind: tools
+name: validation_run_result
+type: validation-run-result
+description: >-
+  Fetch the stored terminal result for a validation run.
+
+---
+kind: tools
+name: cancel_validation_run
+type: validation-run-cancel
+description: >-
+  Request cancellation for an active validation run.
+
+---
+kind: toolsets
+name: validation-run-tools
+description: >-
+  Validation run lifecycle tools for starting, monitoring, retrieving, and
+  cancelling long-running validations.
+tools:
+  - start_validation_run
+  - validation_run_status
+  - validation_run_result
+  - cancel_validation_run
