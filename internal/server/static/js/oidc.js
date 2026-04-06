@@ -42,7 +42,13 @@ function getSafeReturnUrl(candidate) {
     if (url.origin !== window.location.origin) {
       return null;
     }
-    return url.pathname + url.search + url.hash;
+    // Only allow http(s) protocols to block javascript: and data: URIs.
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return null;
+    }
+    const path = url.pathname + url.search + url.hash;
+    // Ensure result is a relative path rooted at /.
+    return path.startsWith("/") ? path : null;
   } catch {
     return null;
   }
