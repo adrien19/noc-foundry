@@ -1,7 +1,7 @@
 # Docker image build setting
 DOCKER:=docker
 DOCKERFILE_DIR?=./docker
-TWIN-TOOLBOX_IMAGE_NAME?=$(RELEASE_NAME)
+NOC-FOUNDRY_IMAGE_NAME?=$(RELEASE_NAME)
 
 # build docker image for linux
 BIN_DIR:=$(OUT_DIR)/$(TARGET_OS)_$(TARGET_ARCH)
@@ -40,24 +40,24 @@ else
 endif
 
 ifeq ($(MANIFEST_TAG),)
-	MANIFEST_TAG=$(TWIN-TOOLBOX_TAG)
+	MANIFEST_TAG=$(NOC-FOUNDRY_TAG)
 endif
 
 ifeq ($(MANIFEST_LATEST_TAG),)
-	MANIFEST_LATEST_TAG=$(TWIN-TOOLBOX_TAG)
+	MANIFEST_LATEST_TAG=$(NOC-FOUNDRY_TAG)
 endif
 
 LINUX_BINS_OUT_DIR=$(OUT_DIR)/linux_$(GOARCH)
-DOCKER_IMAGE=$(DOCKER_REGISTRY)/$(TWIN-TOOLBOX_IMAGE_NAME)
-BUILD_TAG=$(TWIN-TOOLBOX_TAG)-$(TWIN-TOOLBOX_TAG)
+DOCKER_IMAGE=$(DOCKER_REGISTRY)/$(NOC-FOUNDRY_IMAGE_NAME)
+BUILD_TAG=$(NOC-FOUNDRY_TAG)-$(NOC-FOUNDRY_TAG)
 
 
 check-docker-env:
 ifeq ($(DOCKER_REGISTRY),)
 	$(error DOCKER_REGISTRY environment variable must be set)
 endif
-ifeq ($(TWIN-TOOLBOX_TAG),)
-	$(error TWIN-TOOLBOX_TAG environment variable must be set)
+ifeq ($(NOC-FOUNDRY_TAG),)
+	$(error NOC-FOUNDRY_TAG environment variable must be set)
 endif
 
 check-arch:
@@ -70,7 +70,7 @@ endif
 
 docker-build: SHELL := $(shell which bash)
 docker-build: check-docker-env check-arch
-	$(info Building $(DOCKER_IMAGE):$(TWIN-TOOLBOX_TAG) docker image ...)
+	$(info Building $(DOCKER_IMAGE):$(NOC-FOUNDRY_TAG) docker image ...)
 ifeq ($(TARGET_ARCH),$(TARGET_ARCH_LOCAL))
 	$(DOCKER) build --build-arg PKG_FILES=* $(BUILD_ARGS) -f $(DOCKERFILE_DIR)/$(DOCKERFILE) $(BIN_DIR) -t $(DOCKER_IMAGE):$(BUILD_TAG)
 else

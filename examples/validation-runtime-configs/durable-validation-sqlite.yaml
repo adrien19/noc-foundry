@@ -1,7 +1,7 @@
 executionBackend: durabletask
 storeBackend: sqlite
-sqlitePath: /workspaces/twin-toolbox/noc-foundry-validation-runs.sqlite
-durableTaskSQLitePath: /workspaces/twin-toolbox/noc-foundry-validation-taskhub.sqlite
+sqlitePath: /workspaces/noc-foundry/noc-foundry-validation-runs.sqlite
+durableTaskSQLitePath: /workspaces/noc-foundry/noc-foundry-validation-taskhub.sqlite
 maxConcurrentRuns: 4
 maxConcurrentSteps: 4
 resultRetention: 24h
