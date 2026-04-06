@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Examples on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/examples/</link><description>Recent content in Examples on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/examples/index.xml" rel="self" type="application/rss+xml"/><item><title>Local Lab with Keycloak</title><link>https://docs.nocfoundry.dev/dev/examples/local-lab-with-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/examples/local-lab-with-keycloak/</guid><description>&lt;h1 id="local-lab-with-keycloak">Local Lab with Keycloak&lt;/h1>
+&lt;p>Use this protected local lab stack when you want to test:&lt;/p>
+&lt;ul>
+&lt;li>Keycloak-backed OIDC auth services&lt;/li>
+&lt;li>endpoint auth on &lt;code>/api&lt;/code> and &lt;code>/mcp&lt;/code>&lt;/li>
+&lt;li>browser PKCE login for the UI&lt;/li>
+&lt;li>durable validation runs&lt;/li>
+&lt;/ul>
+&lt;p>Main files:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/keycloak-protected-validation.yaml">&lt;code>examples/tools-configs/keycloak-protected-validation.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/server-configs/protected-api-mcp-ui.yaml">&lt;code>examples/server-configs/protected-api-mcp-ui.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/validation-runtime-configs/durable-validation-sqlite.yaml">&lt;code>examples/validation-runtime-configs/durable-validation-sqlite.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/keycloak/docker-compose.keycloak.yaml">&lt;code>examples/keycloak/docker-compose.keycloak.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/keycloak/keycloak-setup.sh">&lt;code>examples/keycloak/keycloak-setup.sh&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/containerlab/noc-foundry-lab.clab.yaml">&lt;code>examples/containerlab/noc-foundry-lab.clab.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/containerlab/install-containerlab.sh">&lt;code>examples/containerlab/install-containerlab.sh&lt;/code>&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>For contributors who want a realistic local network instead of static sample targets,
+pair this protected stack with the SR Linux containerlab fabric.&lt;/p>
+&lt;ul>
+&lt;li>install containerlab on demand with &lt;code>./examples/containerlab/install-containerlab.sh&lt;/code>&lt;/li>
+&lt;li>deploy the lab with &lt;code>sudo containerlab deploy -t examples/containerlab/noc-foundry-lab.clab.yaml&lt;/code>&lt;/li>
+&lt;li>destroy it with &lt;code>sudo containerlab destroy -t examples/containerlab/noc-foundry-lab.clab.yaml&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h2 id="start-keycloak">Start Keycloak&lt;/h2>
+&lt;p>Start the local Keycloak example:&lt;/p></description></item><item><title>Containerlab SR Linux Lab</title><link>https://docs.nocfoundry.dev/dev/examples/containerlab-srlinux-lab/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/examples/containerlab-srlinux-lab/</guid><description>&lt;h1 id="containerlab-sr-linux-lab">Containerlab SR Linux Lab&lt;/h1>
+&lt;p>Use this example when you want a realistic local network topology for NOCFoundry
+development and validation testing.&lt;/p>
+&lt;p>Main files:&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/containerlab/noc-foundry-lab.clab.yaml">&lt;code>examples/containerlab/noc-foundry-lab.clab.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/containerlab/install-containerlab.sh">&lt;code>examples/containerlab/install-containerlab.sh&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/tree/main/examples/containerlab/configs/noc-foundry-lab">&lt;code>examples/containerlab/configs/noc-foundry-lab/&lt;/code>&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;h2 id="topology">Topology&lt;/h2>
+&lt;p>This lab deploys:&lt;/p>
+&lt;ul>
+&lt;li>2 SR Linux spines: &lt;code>srl-b&lt;/code>, &lt;code>srl-c&lt;/code>&lt;/li>
+&lt;li>3 SR Linux leaves: &lt;code>srl-a&lt;/code>, &lt;code>srl-d&lt;/code>, &lt;code>srl-e&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>Each node is configured with:&lt;/p>
+&lt;ul>
+&lt;li>ISIS on the underlay links&lt;/li>
+&lt;li>a loopback address on &lt;code>system0&lt;/code>&lt;/li>
+&lt;li>NETCONF enabled on the management plane&lt;/li>
+&lt;li>native SR Linux gNMI enabled on the management plane&lt;/li>
+&lt;/ul>
+&lt;p>The lab also uses a dedicated management network:&lt;/p></description></item></channel></rss>

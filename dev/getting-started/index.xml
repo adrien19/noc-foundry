@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Getting Started on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/getting-started/</link><description>Recent content in Getting Started on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/getting-started/index.xml" rel="self" type="application/rss+xml"/><item><title>Local Quickstart</title><link>https://docs.nocfoundry.dev/dev/getting-started/local-quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/getting-started/local-quickstart/</guid><description>&lt;h1 id="local-quickstart">Local Quickstart&lt;/h1>
+&lt;p>This quickstart gets a local NOCFoundry instance running with the validation demo and UI.&lt;/p>
+&lt;h2 id="prerequisites">Prerequisites&lt;/h2>
+&lt;ul>
+&lt;li>Go 1.25 or later&lt;/li>
+&lt;li>Docker if you want the local Keycloak flow&lt;/li>
+&lt;li>a shell with access to this repository&lt;/li>
+&lt;/ul>
+&lt;h2 id="optional-start-the-local-sr-linux-topology">Optional: start the local SR Linux topology&lt;/h2>
+&lt;p>If you want to test against a realistic network fabric instead of static examples,
+use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/p>
+&lt;p>Install containerlab only when you need it:&lt;/p></description></item><item><title>MCP Client Quickstart</title><link>https://docs.nocfoundry.dev/dev/getting-started/mcp-client-quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/getting-started/mcp-client-quickstart/</guid><description>&lt;h1 id="mcp-client-quickstart">MCP Client Quickstart&lt;/h1>
+&lt;p>NOCFoundry exposes the Model Context Protocol at:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-text" data-lang="text">&lt;span class="line">&lt;span class="cl">http://127.0.0.1:5000/mcp
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>With the protected validation example, &lt;code>/mcp&lt;/code> is protected by OIDC endpoint auth.&lt;/p>
+&lt;h2 id="what-clients-need">What clients need&lt;/h2>
+&lt;ul>
+&lt;li>the MCP endpoint URL&lt;/li>
+&lt;li>an access token whose &lt;code>aud&lt;/code> matches the configured &lt;code>/mcp&lt;/code> audience&lt;/li>
+&lt;li>support for bearer tokens on HTTP-based MCP transports&lt;/li>
+&lt;/ul>
+&lt;p>The protected resource metadata is served from:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-text" data-lang="text">&lt;span class="line">&lt;span class="cl">/.well-known/oauth-protected-resource/mcp
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="minimal-connection-model">Minimal connection model&lt;/h2>
+&lt;ol>
+&lt;li>Start NOCFoundry with &lt;code>examples/tools-configs/keycloak-protected-validation.yaml&lt;/code> and &lt;code>examples/server-configs/protected-api-mcp-ui.yaml&lt;/code>.&lt;/li>
+&lt;li>Obtain an access token from Keycloak.&lt;/li>
+&lt;li>Configure your MCP client to connect to &lt;code>http://127.0.0.1:5000/mcp&lt;/code>.&lt;/li>
+&lt;li>Supply &lt;code>Authorization: Bearer &amp;lt;token&amp;gt;&lt;/code> on every HTTP request.&lt;/li>
+&lt;/ol>
+&lt;h2 id="audience-reminder">Audience reminder&lt;/h2>
+&lt;p>The access token must match the &lt;code>/mcp&lt;/code> audience configured in:&lt;/p></description></item></channel></rss>

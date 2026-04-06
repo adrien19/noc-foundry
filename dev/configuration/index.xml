@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/configuration/</link><description>Recent content in Configuration on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Tool Catalogs</title><link>https://docs.nocfoundry.dev/dev/configuration/tool-catalogs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/tool-catalogs/</guid><description>&lt;h1 id="tool-catalogs">Tool Catalogs&lt;/h1>
+&lt;p>Tool catalogs define the operational resources NOCFoundry loads at startup.&lt;/p>
+&lt;h2 id="supported-catalog-flags">Supported catalog flags&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>--tools-file&lt;/code>&lt;/li>
+&lt;li>&lt;code>--tools-files&lt;/code>&lt;/li>
+&lt;li>&lt;code>--tools-folder&lt;/code>&lt;/li>
+&lt;li>&lt;code>--prebuilt&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>These are mutually exclusive where appropriate:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>--tools-file&lt;/code>, &lt;code>--tools-files&lt;/code>, and &lt;code>--tools-folder&lt;/code> cannot be combined&lt;/li>
+&lt;li>&lt;code>--prebuilt&lt;/code> can be combined with custom tool catalogs when you want bundled capabilities plus your own configs&lt;/li>
+&lt;/ul>
+&lt;h2 id="what-a-catalog-can-contain">What a catalog can contain&lt;/h2>
+&lt;p>Tool catalogs can define:&lt;/p>
+&lt;ul>
+&lt;li>sources&lt;/li>
+&lt;li>device groups&lt;/li>
+&lt;li>auth services&lt;/li>
+&lt;li>tools&lt;/li>
+&lt;li>toolsets&lt;/li>
+&lt;li>prompts&lt;/li>
+&lt;li>promptsets&lt;/li>
+&lt;li>embedding models&lt;/li>
+&lt;/ul>
+&lt;h2 id="prebuilt-catalogs">Prebuilt catalogs&lt;/h2>
+&lt;p>&lt;code>--prebuilt&lt;/code> takes a bundled catalog name, not an individual tool name.&lt;/p></description></item><item><title>Server Config</title><link>https://docs.nocfoundry.dev/dev/configuration/server-config/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/server-config/</guid><description>&lt;h1 id="server-config">Server Config&lt;/h1>
+&lt;p>&lt;code>--server-config&lt;/code> carries server-wide runtime policy that should not be owned by individual tool catalog files.&lt;/p>
+&lt;h2 id="current-focus">Current focus&lt;/h2>
+&lt;p>Today, the most important server config capabilities are:&lt;/p>
+&lt;ul>
+&lt;li>endpoint auth for &lt;code>/api&lt;/code>&lt;/li>
+&lt;li>endpoint auth for &lt;code>/mcp&lt;/code>&lt;/li>
+&lt;li>browser UI auth configuration for PKCE login&lt;/li>
+&lt;/ul>
+&lt;h2 id="example">Example&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">auth&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">endpointAuth&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">api&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">authServices&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;noc-keycloak&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">audience&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">${NOCFOUNDRY_BASE_URL:http://127.0.0.1:5000}/api&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">mcp&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">authServices&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;noc-keycloak&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">audience&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">${NOCFOUNDRY_BASE_URL:http://127.0.0.1:5000}/mcp&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ui&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">enabled&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">authService&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">noc-keycloak&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">clientId&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">${KEYCLOAK_UI_CLIENT_ID:noc-foundry-ui}&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">scopes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;openid&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;profile&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;email&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">redirectPath&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">/ui/auth/callback&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="rules-to-remember">Rules to remember&lt;/h2>
+&lt;ul>
+&lt;li>endpoint auth policy is global to the server, not per tool catalog&lt;/li>
+&lt;li>auth services are still defined in tool catalogs and referenced here by name&lt;/li>
+&lt;li>UI login depends on API endpoint auth being enabled&lt;/li>
+&lt;/ul>
+&lt;h2 id="start-command">Start command&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./nocfoundry &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --tools-file examples/tools-configs/keycloak-protected-validation.yaml &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --server-config examples/server-configs/protected-api-mcp-ui.yaml &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --validation-config examples/validation-runtime-configs/durable-validation-sqlite.yaml &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --ui
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Validation Runtime</title><link>https://docs.nocfoundry.dev/dev/configuration/validation-runtime/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/validation-runtime/</guid><description>&lt;h1 id="validation-runtime">Validation Runtime&lt;/h1>
+&lt;p>&lt;code>--validation-config&lt;/code> controls how validation runs are executed and stored.&lt;/p>
+&lt;h2 id="key-runtime-settings">Key runtime settings&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>executionBackend&lt;/code>&lt;/li>
+&lt;li>&lt;code>storeBackend&lt;/code>&lt;/li>
+&lt;li>&lt;code>sqlitePath&lt;/code>&lt;/li>
+&lt;li>&lt;code>durableTaskSQLitePath&lt;/code>&lt;/li>
+&lt;li>&lt;code>maxConcurrentRuns&lt;/code>&lt;/li>
+&lt;li>&lt;code>maxConcurrentSteps&lt;/code>&lt;/li>
+&lt;li>&lt;code>resultRetention&lt;/code>&lt;/li>
+&lt;li>&lt;code>eventRetention&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h2 id="example">Example&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">executionBackend&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">durabletask&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">storeBackend&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">sqlite&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">sqlitePath&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">/var/lib/nocfoundry/noc-foundry-validation-runs.sqlite&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">durableTaskSQLitePath&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">/var/lib/nocfoundry/noc-foundry-validation-taskhub.sqlite&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">maxConcurrentRuns&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">4&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">maxConcurrentSteps&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">4&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">resultRetention&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">24h&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">eventRetention&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">24h&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="backend-choices">Backend choices&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>local&lt;/code> is simpler and good for lightweight execution&lt;/li>
+&lt;li>&lt;code>durabletask&lt;/code> is better for long-running validations that should survive interruption&lt;/li>
+&lt;/ul>
+&lt;h2 id="store-choices">Store choices&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>memory&lt;/code> is ephemeral&lt;/li>
+&lt;li>&lt;code>sqlite&lt;/code> provides persistence for status, results, and events&lt;/li>
+&lt;/ul>
+&lt;h2 id="recommended-local-lab-setup">Recommended local lab setup&lt;/h2>
+&lt;p>For the protected validation example, use:&lt;/p></description></item></channel></rss>

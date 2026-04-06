@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Auth on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/auth/</link><description>Recent content in Auth on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/auth/index.xml" rel="self" type="application/rss+xml"/><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.dev/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
+&lt;p>NOCFoundry can protect the HTTP surfaces themselves, not just individual tool calls.&lt;/p>
+&lt;h2 id="protected-surfaces">Protected surfaces&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>/api&lt;/code>&lt;/li>
+&lt;li>&lt;code>/mcp&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>These surfaces are configured separately in &lt;code>--server-config&lt;/code> and can require different audiences.&lt;/p>
+&lt;h2 id="auth-service-model">Auth service model&lt;/h2>
+&lt;ul>
+&lt;li>OIDC providers are defined as &lt;code>authServices&lt;/code> in tool catalog files&lt;/li>
+&lt;li>the server config references those services by name&lt;/li>
+&lt;li>only auth services selected by server policy can satisfy a protected surface&lt;/li>
+&lt;/ul>
+&lt;h2 id="metadata-and-rfc-9728">Metadata and RFC 9728&lt;/h2>
+&lt;p>NOCFoundry serves protected resource metadata for:&lt;/p></description></item><item><title>UI Login with Keycloak</title><link>https://docs.nocfoundry.dev/dev/auth/ui-login-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/auth/ui-login-keycloak/</guid><description>&lt;h1 id="ui-login-with-keycloak">UI Login with Keycloak&lt;/h1>
+&lt;p>NOCFoundry’s browser UI acts as an OIDC public client and uses Authorization Code + PKCE to access the protected &lt;code>/api&lt;/code> surface.&lt;/p>
+&lt;h2 id="local-demo-flow">Local demo flow&lt;/h2>
+&lt;ol>
+&lt;li>Start Keycloak:&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">docker compose -f examples/keycloak/docker-compose.keycloak.yaml up -d
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ol start="2">
+&lt;li>Bootstrap the demo realm and clients:&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./examples/keycloak/keycloak-setup.sh
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ol start="3">
+&lt;li>Start NOCFoundry with:&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/keycloak-protected-validation.yaml">&lt;code>examples/tools-configs/keycloak-protected-validation.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/server-configs/protected-api-mcp-ui.yaml">&lt;code>examples/server-configs/protected-api-mcp-ui.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;h2 id="important-client-details">Important client details&lt;/h2>
+&lt;p>The setup script creates:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>noc-foundry&lt;/code> for the resource-side auth service&lt;/li>
+&lt;li>&lt;code>noc-foundry-ui&lt;/code> for the browser PKCE client&lt;/li>
+&lt;/ul>
+&lt;p>The UI client must:&lt;/p></description></item></channel></rss>

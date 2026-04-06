@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Reference on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/reference/</link><description>Recent content in Reference on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/reference/index.xml" rel="self" type="application/rss+xml"/><item><title>CLI Reference</title><link>https://docs.nocfoundry.dev/dev/reference/cli/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/reference/cli/</guid><description>&lt;h1 id="cli-reference">CLI Reference&lt;/h1>
+&lt;p>The root command is:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">nocfoundry
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Core entry points include:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>nocfoundry invoke&lt;/code>&lt;/li>
+&lt;li>&lt;code>nocfoundry skills-generate&lt;/code>&lt;/li>
+&lt;li>&lt;code>nocfoundry --ui&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h2 id="prebuilt-catalogs">Prebuilt catalogs&lt;/h2>
+&lt;p>The &lt;code>--prebuilt&lt;/code> flag loads a bundled tool catalog by name.&lt;/p>
+&lt;p>Current bundled prebuilt:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>validation-runs&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;p>Example:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./nocfoundry --prebuilt validation-runs
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>--prebuilt&lt;/code> is not a boolean flag, and it does not take an individual tool name. This is invalid:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./nocfoundry --prebuilt start_validation_run
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>because &lt;code>start_validation_run&lt;/code> is a tool inside the &lt;code>validation-runs&lt;/code> catalog, not the catalog name itself.&lt;/p></description></item><item><title>FAQ</title><link>https://docs.nocfoundry.dev/dev/reference/faq/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/reference/faq/</guid><description>&lt;h1 id="faq">FAQ&lt;/h1>
+&lt;h2 id="does-nocfoundry-execute-prompts-itself">Does NOCFoundry execute prompts itself?&lt;/h2>
+&lt;p>No. Prompt resources are exposed for clients and agents to consume. NOCFoundry does not execute prompts against an LLM.&lt;/p>
+&lt;h2 id="why-is-api-returning-401">Why is &lt;code>/api&lt;/code> returning 401?&lt;/h2>
+&lt;p>If endpoint auth is enabled, callers must present a bearer token that matches the configured &lt;code>/api&lt;/code> audience.&lt;/p>
+&lt;h2 id="does-the-ui-require-login">Does the UI require login?&lt;/h2>
+&lt;p>The UI shell can remain public while its backing &lt;code>/api&lt;/code> calls are protected. When UI auth is enabled, the browser signs in through OIDC + PKCE.&lt;/p></description></item></channel></rss>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Tools on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/resources/tools/</link><description>Recent content in Tools on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/resources/tools/index.xml" rel="self" type="application/rss+xml"/><item><title>Nokia Validate</title><link>https://docs.nocfoundry.dev/dev/resources/tools/nokia-validate/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/resources/tools/nokia-validate/</guid><description>&lt;h1 id="nokia-validate">&lt;code>nokia-validate&lt;/code>&lt;/h1>
+&lt;p>&lt;code>nokia-validate&lt;/code> is a read-only validation tool for Nokia devices and blast-radius checks. It collects evidence from one or more devices, evaluates configured assertions, and returns structured pass/fail results for a selected phase such as &lt;code>pre&lt;/code>, &lt;code>during&lt;/code>, or &lt;code>post&lt;/code>.&lt;/p>
+&lt;p>This tool is intentionally not a change engine. Agents and operators should use it as a deterministic validation primitive inside a larger maintenance workflow.&lt;/p>
+&lt;h2 id="what-it-is-good-for">What it is good for&lt;/h2>
+&lt;ul>
+&lt;li>pre-change readiness validation&lt;/li>
+&lt;li>post-change verification&lt;/li>
+&lt;li>blast-radius checks across multiple devices&lt;/li>
+&lt;li>structured result collection for async validation runs&lt;/li>
+&lt;/ul>
+&lt;h2 id="key-behavior">Key behavior&lt;/h2>
+&lt;ul>
+&lt;li>supports either a single &lt;code>source&lt;/code> or a fleet-oriented &lt;code>sourceSelector&lt;/code>&lt;/li>
+&lt;li>runs ordered phases made up of &lt;code>collect&lt;/code> and &lt;code>assert&lt;/code> steps&lt;/li>
+&lt;li>uses protocol-aware transport selection for network retrieval&lt;/li>
+&lt;li>returns structured evidence, step status, and overall validation outcomes&lt;/li>
+&lt;li>integrates with durable validation runs through the &lt;code>validation_run_*&lt;/code> lifecycle tools&lt;/li>
+&lt;/ul>
+&lt;h2 id="runtime-parameters">Runtime parameters&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>phase&lt;/code>: required when more than one phase is defined&lt;/li>
+&lt;li>&lt;code>device&lt;/code>: optional when &lt;code>sourceSelector&lt;/code> is used and you want to narrow execution&lt;/li>
+&lt;/ul>
+&lt;h2 id="example-operator-flow">Example operator flow&lt;/h2>
+&lt;ol>
+&lt;li>run the &lt;code>pre&lt;/code> phase before maintenance&lt;/li>
+&lt;li>perform the network change outside the tool&lt;/li>
+&lt;li>run the &lt;code>post&lt;/code> phase&lt;/li>
+&lt;li>compare results and decide whether rollback is required&lt;/li>
+&lt;/ol>
+&lt;h2 id="example-configuration">Example configuration&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">kind&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">tools&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">maintenance_validation&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">nokia-validate&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">authRequired&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">noc-keycloak&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">sourceSelector&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">matchLabels&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">validation_demo&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;true&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">phases&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">pre&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">steps&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">collect_control_version&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">collect&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">into&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">control_versions&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">targets&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;control_plane&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">operation&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">get_system_version&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">assert_versions&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">assert&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">expected_version&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">from&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s2">&amp;#34;control_versions&amp;#34;&lt;/span>&lt;span class="p">]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">scope&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">per_record&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">expr&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s1">&amp;#39;.payload.software_version == &amp;#34;23.10.R1&amp;#34;&amp;#39;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="related-examples">Related examples&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/keycloak-protected-validation.yaml">&lt;code>examples/tools-configs/keycloak-protected-validation.yaml&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.nocfoundry.dev/dev/workflows/validation-runs/">Validation runs&lt;/a>&lt;/li>
+&lt;/ul></description></item></channel></rss>
