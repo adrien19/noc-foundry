@@ -147,7 +147,8 @@ func (rt *UserAgentRoundTripper) RoundTrip(req *http.Request) (*http.Response, e
 func NewStrictDecoder(v interface{}) (*yaml.Decoder, error) {
 	b, err := yaml.Marshal(v)
 	if err != nil {
-		return nil, fmt.Errorf("fail to marshal %q: %w", v, err)
+		// Avoid including the full value in the error message, as it may contain sensitive data.
+		return nil, fmt.Errorf("fail to marshal value: %w", err)
 	}
 
 	dec := yaml.NewDecoder(

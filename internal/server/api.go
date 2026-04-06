@@ -342,8 +342,8 @@ func toolInvokeHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 				// Process auth error
 				if statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
 					if clientAuth {
-						// Token error, pass through 401/403
-						s.logger.DebugContext(ctx, fmt.Sprintf("Client credentials lack authorization: %v", err))
+						// Token error, pass through 401/403. Avoid logging full error to prevent leaking sensitive details.
+						s.logger.DebugContext(ctx, "Client credentials lack authorization")
 						_ = render.Render(w, r, newErrResponse(err, statusCode))
 						return
 					}
@@ -357,7 +357,8 @@ func toolInvokeHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// Unknown error -> 500
-			s.logger.ErrorContext(ctx, fmt.Sprintf("Tool invocation unknown error: %v", err))
+			// Avoid logging full error details here, as they may contain sensitive data from underlying sources.
+			s.logger.ErrorContext(ctx, "Tool invocation unknown error (details omitted to protect sensitive data)")
 			_ = render.Render(w, r, newErrResponse(err, http.StatusInternalServerError))
 			return
 		}
