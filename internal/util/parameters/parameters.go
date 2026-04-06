@@ -784,13 +784,29 @@ func (p *StringParameter) Parse(v any) (any, error) {
 func applyEscape(escape, v string) (any, error) {
 	switch escape {
 	case escapeBackticks:
-		return fmt.Sprintf("`%s`", v), nil
+		// Escape backslashes first so they don't interfere with later escaping.
+		escaped := strings.ReplaceAll(v, `\`, `\\`)
+		// Escape backticks to avoid breaking out of the enclosing backticks.
+		escaped = strings.ReplaceAll(escaped, "`", "\\`")
+		return fmt.Sprintf("`%s`", escaped), nil
 	case escapeDoubleQuotes:
-		return fmt.Sprintf(`"%s"`, v), nil
+		// Backslash-escape backslashes and double quotes to keep the value
+		// safe when embedded in double-quoted contexts.
+		escaped := strings.ReplaceAll(v, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+		return fmt.Sprintf(`"%s"`, escaped), nil
 	case escapeSingleQuotes:
-		return fmt.Sprintf(`'%s'`, v), nil
+		// Backslash-escape backslashes and single quotes to keep the value
+		// safe when embedded in single-quoted contexts.
+		escaped := strings.ReplaceAll(v, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, `'`, `\'`)
+		return fmt.Sprintf(`'%s'`, escaped), nil
 	case escapeSquareBrackets:
-		return fmt.Sprintf("[%s]", v), nil
+		// Escape backslashes and the closing bracket to avoid prematurely
+		// terminating bracket-delimited contexts.
+		escaped := strings.ReplaceAll(v, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, "]", `\]`)
+		return fmt.Sprintf("[%s]", escaped), nil
 	default:
 		return nil, fmt.Errorf("%s is not an allowed escaping delimiter", escape)
 	}
