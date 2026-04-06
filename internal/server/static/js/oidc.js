@@ -32,28 +32,6 @@ import { state } from "./state.js";
 
 const TOKEN_EXPIRY_SKEW_MS = 30_000;
 
-function getSafeReturnUrl(candidate) {
-  if (!candidate || typeof candidate !== "string") {
-    return null;
-  }
-
-  try {
-    const url = new URL(candidate, window.location.origin);
-    if (url.origin !== window.location.origin) {
-      return null;
-    }
-    // Only allow http(s) protocols to block javascript: and data: URIs.
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
-      return null;
-    }
-    const path = url.pathname + url.search + url.hash;
-    // Ensure result is a relative path rooted at /.
-    return path.startsWith("/") ? path : null;
-  } catch {
-    return null;
-  }
-}
-
 export class AuthRequiredError extends Error {
   constructor(message = "Authentication required", status = 401) {
     super(message);
@@ -338,14 +316,19 @@ export async function handleAuthCallback() {
     clearPKCETransaction();
     clearSignedOutMarker();
     setStatus("Login complete. Redirecting...");
-    const safeReturnUrl = getSafeReturnUrl(txn.returnUrl);
-    // Inline guard so static analysis (CodeQL js/xss-through-dom) can
-    // verify the navigated value is a safe relative path.
-    if (safeReturnUrl && safeReturnUrl.startsWith("/") && !safeReturnUrl.startsWith("//")) {
-      window.location.replace(safeReturnUrl);
-    } else {
-      window.location.replace("/ui/tools");
-    }
+    // Validate return URL inline so CodeQL can trace the sanitisation:
+    // new URL().pathname breaks the taint from sessionStorage.
+    let redirectTo = "/ui/tools";
+    try {
+      const parsed = new URL(txn.returnUrl, window.location.origin);
+      const path = parsed.pathname + parsed.search + parsed.hash;
+      if (parsed.origin === window.location.origin
+        && (parsed.protocol === "https:" || parsed.protocol === "http:")
+        && path.startsWith("/") && !path.startsWith("//")) {
+        redirectTo = path;
+      }
+    } catch { /* malformed URL — use default */ }
+    window.location.replace(redirectTo);
   } catch (error) {
     clearAuthSession();
     saveSignedOutMarker();
