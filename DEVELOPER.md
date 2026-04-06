@@ -39,7 +39,7 @@ curl http://127.0.0.1:5000
 1. Unit tests:
 
 ```bash
-go test -race -v ./cmd/... ./internal/...
+CGO_ENABLED=1 go test -race -v ./cmd/... ./internal/...
 ```
 
 1. Targeted integration tests (require containerlab + Docker):

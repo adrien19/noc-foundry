@@ -29,9 +29,6 @@ import (
 	yaml "github.com/goccy/go-yaml"
 )
 
-// GDAClientID is the client ID for Gemini Data Analytics
-const GDAClientID = "GENAI_TOOLBOX"
-
 // DecodeJSON decodes a given reader into an interface using the json decoder.
 func DecodeJSON(r io.Reader, v interface{}) error {
 	defer io.Copy(io.Discard, r) //nolint:errcheck

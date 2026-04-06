@@ -39,7 +39,7 @@ This file (should be same file as `CLAUDE.md` and `AGENTS.md`) provides context 
 
 ### Testing
 
-- **Unit Tests:** `go test -race -v ./cmd/... ./internal/...`
+- **Unit Tests:** `CGO_ENABLED=1 go test -race -v ./cmd/... ./internal/...`
 - **Integration Tests (require containerlab + Docker):**
   - Run specific source tests: `CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/<source_dir>`
   - Example: `CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/nokia`

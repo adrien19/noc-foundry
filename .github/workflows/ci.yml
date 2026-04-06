@@ -40,7 +40,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Run Go unit tests
-        run: go test -race -v ./cmd/... ./internal/...
+        run: CGO_ENABLED=1 go test -race -v ./cmd/... ./internal/...
 
   go-compile:
     runs-on: ubuntu-latest
