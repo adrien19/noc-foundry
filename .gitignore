@@ -60,7 +60,7 @@ go.work.sum
 nocfoundry
 .codex
 
-##### LOCAL ONLY FILES FOR DELETE LATER ######
+##### LOCAL ONLY FILES FOR DEVELOPMENT ######
 local-configs/
 .devcontainer/docs/
 .devcontainer/scripts/gnmi-query/
