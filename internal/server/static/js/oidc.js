@@ -32,6 +32,22 @@ import { state } from "./state.js";
 
 const TOKEN_EXPIRY_SKEW_MS = 30_000;
 
+function getSafeReturnUrl(candidate) {
+  if (!candidate || typeof candidate !== "string") {
+    return null;
+  }
+
+  try {
+    const url = new URL(candidate, window.location.origin);
+    if (url.origin !== window.location.origin) {
+      return null;
+    }
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return null;
+  }
+}
+
 export class AuthRequiredError extends Error {
   constructor(message = "Authentication required", status = 401) {
     super(message);
@@ -71,7 +87,7 @@ export function decodeAccessTokenClaims(token) {
 export function isTokenExpired(token, nowMs = Date.now()) {
   const claims = decodeAccessTokenClaims(token);
   if (!claims || typeof claims.exp !== "number") return true;
-  return claims.exp * 1000 <= nowMs+TOKEN_EXPIRY_SKEW_MS;
+  return claims.exp * 1000 <= nowMs + TOKEN_EXPIRY_SKEW_MS;
 }
 
 function getCurrentUser(claims) {
@@ -316,7 +332,8 @@ export async function handleAuthCallback() {
     clearPKCETransaction();
     clearSignedOutMarker();
     setStatus("Login complete. Redirecting...");
-    window.location.replace(txn.returnUrl || "/ui/tools");
+    const safeReturnUrl = getSafeReturnUrl(txn.returnUrl);
+    window.location.replace(safeReturnUrl || "/ui/tools");
   } catch (error) {
     clearAuthSession();
     saveSignedOutMarker();
