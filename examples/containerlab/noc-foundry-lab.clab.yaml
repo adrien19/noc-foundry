@@ -1,0 +1,49 @@
+# NOCFoundry local topology (5-node Clos-style fabric) for Containerlab.
+#
+# Node roles:
+# - srl-b, srl-c: spines
+# - srl-a, srl-d, srl-e: leaves
+#
+# This provides multiple path options such as:
+# - srl-a -> srl-d via srl-b
+# - srl-a -> srl-d via srl-c
+#
+name: noc-foundry-lab
+
+mgmt:
+  network: noc-foundry-mgmt
+  ipv4-subnet: 172.31.250.0/24
+
+topology:
+  defaults:
+    kind: nokia_srlinux
+    image: ghcr.io/nokia/srlinux:24.10
+
+  nodes:
+    srl-a:
+      mgmt-ipv4: 172.31.250.11
+      startup-config: configs/noc-foundry-lab/srl-a.cli
+
+    srl-b:
+      mgmt-ipv4: 172.31.250.12
+      startup-config: configs/noc-foundry-lab/srl-b.cli
+
+    srl-c:
+      mgmt-ipv4: 172.31.250.13
+      startup-config: configs/noc-foundry-lab/srl-c.cli
+
+    srl-d:
+      mgmt-ipv4: 172.31.250.14
+      startup-config: configs/noc-foundry-lab/srl-d.cli
+
+    srl-e:
+      mgmt-ipv4: 172.31.250.15
+      startup-config: configs/noc-foundry-lab/srl-e.cli
+
+  links:
+    - endpoints: ["srl-a:e1-1", "srl-b:e1-1"]
+    - endpoints: ["srl-a:e1-2", "srl-c:e1-1"]
+    - endpoints: ["srl-d:e1-1", "srl-b:e1-2"]
+    - endpoints: ["srl-d:e1-2", "srl-c:e1-2"]
+    - endpoints: ["srl-e:e1-1", "srl-b:e1-3"]
+    - endpoints: ["srl-e:e1-2", "srl-c:e1-3"]

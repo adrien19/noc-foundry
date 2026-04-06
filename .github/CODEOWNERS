@@ -1,0 +1,27 @@
+# Default owner for everything in the repo
+
+* @adrien19
+
+# CI/CD workflows
+
+.github/ @adrien19
+
+# Authentication and security
+
+internal/auth/ @adrien19
+
+# Data sources (SSH, gNMI, HTTP, NETCONF)
+
+internal/sources/ @adrien19
+
+# Tool implementations
+
+internal/tools/ @adrien19
+
+# Server core
+
+internal/server/ @adrien19
+
+# Validation framework
+
+internal/validation/ @adrien19

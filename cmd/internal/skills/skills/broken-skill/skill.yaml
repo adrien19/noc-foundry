@@ -1,0 +1,16 @@
+apiVersion: noc-foundry/v1alpha1
+kind: Skill
+name: broken-skill
+description: Network operations agent skill for the inspection-workflow workflow.
+toolset: inspection-workflow
+tools:
+- name: hello-http
+  description: hello tool
+execution:
+  command: nocfoundry
+  args:
+  - --tools-file
+  - assets/tools.yaml
+assets:
+- type: file
+  path: assets/tools.yaml

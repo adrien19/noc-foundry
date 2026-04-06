@@ -1,0 +1,6 @@
+{{ if .File -}}
+  {{ $editPath := printf "%s/edit/main/.webdocs/%s" site.Params.github_project_repo .File.Path }}
+  <div class="td-page-meta ms-2 pb-1 pt-2 mb-0 nocfoundry-page-meta">
+    <a href="{{ $editPath }}" target="_blank" rel="noopener">Edit this page on GitHub</a>
+  </div>
+{{ end -}}

@@ -1,0 +1,97 @@
+name: edge-publish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: edge-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  edge-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+
+      # Edge binary is intentionally linux/amd64-only; multi-platform
+      # binaries are produced by the release-artifacts workflow.
+      - name: Build edge binary archive
+        run: |
+          set -euo pipefail
+          OUT_DIR="$RUNNER_TEMP/nocfoundry-linux-amd64"
+          mkdir -p "${OUT_DIR}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build \
+              -trimpath \
+              -ldflags="-s -w -X github.com/adrien19/noc-foundry/cmd.buildType=binary -X github.com/adrien19/noc-foundry/cmd.commitSha=${GITHUB_SHA}" \
+              -o "${OUT_DIR}/nocfoundry" \
+              .
+          cp LICENSE README.md "${OUT_DIR}/"
+          tar -C "${OUT_DIR}" -czf "$RUNNER_TEMP/nocfoundry_edge_linux_amd64.tar.gz" .
+
+      - name: Upload edge artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nocfoundry_edge_linux_amd64
+          path: ${{ runner.temp }}/nocfoundry_edge_linux_amd64.tar.gz
+          if-no-files-found: error
+
+  edge-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=edge
+            type=sha,format=short,prefix=sha-
+
+      - name: Build and push edge image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            BUILD_TYPE=container
+            COMMIT_SHA=${{ github.sha }}
+
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

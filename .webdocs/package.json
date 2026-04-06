@@ -1,0 +1,13 @@
+{
+  "name": "noc-foundry-webdocs",
+  "private": true,
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "postcss-cli": "^11.0.0"
+  },
+  "scripts": {
+    "dev": "hugo server --source . --disableFastRender",
+    "build": "hugo --source . --gc --minify"
+  }
+}

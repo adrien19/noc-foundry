@@ -1,0 +1,155 @@
+// Copyright 2026 Adrien Ndikumana
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package profiles implements a model profile registry keyed by
+// vendor.platform. Each profile defines per-operation descriptors
+// that specify protocol preference, path/command templates, and
+// required source capabilities.
+package profiles
+
+import (
+	"fmt"
+	"strings"
+	"sync"
+
+	"github.com/adrien19/noc-foundry/internal/network/capabilities"
+)
+
+// Well-known operation IDs.
+const (
+	OpGetInterfaces    = "get_interfaces"
+	OpGetSystemVersion = "get_system_version"
+)
+
+// Protocol identifies a retrieval method.
+type Protocol string
+
+const (
+	ProtocolGnmiOpenConfig    Protocol = "gnmi_openconfig"
+	ProtocolGnmiNative        Protocol = "gnmi_native"
+	ProtocolCLI               Protocol = "cli"
+	ProtocolNetconfOpenConfig Protocol = "netconf_openconfig"
+	ProtocolNetconfNative     Protocol = "netconf_native"
+)
+
+// ProtocolPath describes one way to retrieve data for an operation.
+type ProtocolPath struct {
+	Protocol Protocol
+	// Paths holds gNMI paths (for gNMI protocols) or is empty for CLI.
+	Paths []string
+	// Command holds the CLI command template (for CLI protocol).
+	Command string
+	// Format declares the expected output encoding when using the CLI
+	// protocol. Valid values: "text" (default), "json", "xml".
+	// The declared format is used to select the appropriate parser from
+	// the registry and to inform any user-defined jq transform.
+	Format string
+	// FormatArg is a vendor-specific argument appended to Command to
+	// request the declared Format. Empty means the command is used as-is.
+	// Examples: "| json", "--format json", "output-format json".
+	FormatArg string
+	// Filter is the NETCONF subtree filter XML body. Used for NETCONF protocols.
+	// An empty string means no filter (retrieve the full datastore).
+	Filter string
+	// UseGetConfig, when true, issues a NETCONF <get-config> instead of <get>.
+	// GetConfig retrieves only configuration data; Get retrieves config + state.
+	// Defaults to false (uses <get>).
+	UseGetConfig bool
+	// Datastore is the NETCONF source datastore for GetConfig RPCs.
+	// Valid values: "running" (default), "candidate", "startup".
+	Datastore string
+}
+
+// OutputFormat returns the effective output format, defaulting to "text"
+// when the Format field is empty.
+func (pp ProtocolPath) OutputFormat() string {
+	if pp.Format == "" {
+		return "text"
+	}
+	return pp.Format
+}
+
+// CanExecute returns true if the source capabilities satisfy this path.
+func (pp ProtocolPath) CanExecute(caps capabilities.SourceCapabilities) bool {
+	switch pp.Protocol {
+	case ProtocolGnmiOpenConfig:
+		return caps.GnmiSnapshot && caps.OpenConfigPaths
+	case ProtocolGnmiNative:
+		return caps.GnmiSnapshot && caps.NativeYang
+	case ProtocolCLI:
+		return caps.CLI
+	case ProtocolNetconfOpenConfig:
+		return caps.Netconf && caps.OpenConfigPaths
+	case ProtocolNetconfNative:
+		return caps.Netconf && caps.NativeYang
+	default:
+		return false
+	}
+}
+
+// OperationDescriptor defines how to execute a specific read operation
+// on a given device profile, with protocol paths in preference order.
+type OperationDescriptor struct {
+	OperationID string
+	Paths       []ProtocolPath // ordered by preference (best first)
+}
+
+// Profile represents a vendor+platform model profile containing
+// the operations it supports and how to execute each one.
+type Profile struct {
+	Vendor     string
+	Platform   string
+	Operations map[string]OperationDescriptor
+}
+
+// profileKey creates the registry lookup key.
+func profileKey(vendor, platform string) string {
+	return strings.ToLower(vendor) + "." + strings.ToLower(platform)
+}
+
+var (
+	mu       sync.RWMutex
+	registry = map[string]*Profile{}
+)
+
+// Register adds a profile to the registry. Panics on duplicate.
+func Register(profile *Profile) {
+	key := profileKey(profile.Vendor, profile.Platform)
+	mu.Lock()
+	defer mu.Unlock()
+	if _, exists := registry[key]; exists {
+		panic(fmt.Sprintf("profile %q already registered", key))
+	}
+	registry[key] = profile
+}
+
+// Lookup returns the profile for the given vendor and platform.
+func Lookup(vendor, platform string) (*Profile, bool) {
+	key := profileKey(vendor, platform)
+	mu.RLock()
+	defer mu.RUnlock()
+	p, ok := registry[key]
+	return p, ok
+}
+
+// AllProfiles returns a snapshot of all registered profiles.
+func AllProfiles() map[string]*Profile {
+	mu.RLock()
+	defer mu.RUnlock()
+	out := make(map[string]*Profile, len(registry))
+	for k, v := range registry {
+		out[k] = v
+	}
+	return out
+}

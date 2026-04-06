@@ -1,0 +1,32 @@
+[[sections]]
+name = "Getting Started"
+path = "/getting-started/"
+
+[[sections]]
+name = "Configuration"
+path = "/configuration/"
+
+[[sections]]
+name = "Auth"
+path = "/auth/"
+
+[[sections]]
+name = "Workflows"
+path = "/workflows/"
+
+[[sections]]
+name = "Sources"
+path = "/resources/sources/"
+
+[[sections]]
+name = "Tools"
+path = "/resources/tools/"
+
+[[sections]]
+name = "Examples"
+path = "/examples/"
+
+[[sections]]
+name = "Reference"
+path = "/reference/"
+

@@ -1,0 +1,370 @@
+# Durable validation workflow example with local Keycloak protection.
+#
+# This example demonstrates:
+# - durable validation runs with sqlite + durabletask
+# - layered auth using a shared Keycloak OIDC auth service
+# - browser UI login via the separate server auth policy
+# - a workflow-oriented toolset with a linked promptset
+#
+# Default device hosts match the management subnet in
+# `examples/containerlab/noc-foundry-lab.clab.yaml`.
+# Override the `*_HOST` environment variables if you customize that subnet.
+
+---
+kind: deviceGroups
+name: validation-lab
+type: static
+sourceTemplates:
+  gnmi:
+    type: gnmi
+    port: ${GNMI_PORT:57400}
+    tls_insecure: true
+    username: ${GNMI_USER:admin}
+    password: ${GNMI_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    native_yang: true
+    openconfig: false
+  netconf:
+    type: netconf
+    port: ${NETCONF_PORT:830}
+    username: ${SSH_USER:admin}
+    password: ${SSH_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    native_yang: true
+    openconfig: false
+    timeout: 30s
+  ssh:
+    type: ssh
+    port: ${SSH_PORT:22}
+    username: ${SSH_USER:admin}
+    password: ${SSH_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    timeout: 30s
+devices:
+  - name: primary-1
+    host: ${PRIMARY1_HOST:172.31.250.12}
+    labels:
+      validation_demo: "true"
+      blast_radius: maintenance-window
+      role: primary
+      plane: control
+      node: srl-b
+      site: lab-east
+  - name: backup-1
+    host: ${BACKUP1_HOST:172.31.250.13}
+    labels:
+      validation_demo: "true"
+      blast_radius: maintenance-window
+      role: backup
+      plane: service
+      node: srl-c
+      site: lab-east
+  - name: access-1
+    host: ${ACCESS1_HOST:172.31.250.11}
+    labels:
+      validation_demo: "true"
+      blast_radius: maintenance-window
+      role: access
+      plane: access
+      node: srl-a
+      site: lab-east
+
+---
+kind: authServices
+name: noc-keycloak
+type: oidc
+issuerUrl: ${KEYCLOAK_ISSUER_URL:http://127.0.0.1:8180/realms/network-ops}
+clientId: noc-foundry
+skipClientIdCheck: true
+
+---
+kind: tools
+name: maintenance_validation
+type: nokia-validate
+description: >-
+  Durable long-running validation workflow for a protected Nokia maintenance
+  window using sqlite-backed run storage and the durabletask backend.
+authRequired:
+  - noc-keycloak
+sourceSelector:
+  matchLabels:
+    validation_demo: "true"
+    blast_radius: maintenance-window
+  maxConcurrency: 5
+groups:
+  control_plane:
+    matchLabels:
+      plane: control
+  service_plane:
+    matchLabels:
+      plane: service
+  access_plane:
+    matchLabels:
+      plane: access
+  primaries:
+    matchLabels:
+      role: primary
+  backups:
+    matchLabels:
+      role: backup
+defaults:
+  interval: 15s
+  timeout: 5m
+templates:
+  collect_control_version:
+    name: collect_control_version
+    collect:
+      into: control_versions
+      targets: ["control_plane"]
+      operation: get_system_version
+      transport:
+        prefer: ["gnmi", "netconf", "ssh"]
+        require: ["gnmi"]
+        fallback: false
+  collect_service_interfaces:
+    name: collect_service_interfaces
+    collect:
+      into: service_interfaces
+      targets: ["service_plane"]
+      operation: get_interfaces
+      transport:
+        prefer: ["netconf", "gnmi", "ssh"]
+        require: ["netconf"]
+        fallback: false
+  collect_access_cli:
+    name: collect_access_cli
+    collect:
+      into: access_cli
+      targets: ["access_plane"]
+      command: show version | as json
+      transforms:
+        run_command:
+          format: json
+      transport:
+        prefer: ["ssh"]
+        require: ["ssh"]
+        fallback: false
+  collect_control_version_post:
+    name: collect_control_version_post
+    collect:
+      into: control_versions_post
+      targets: ["control_plane"]
+      operation: get_system_version
+      transport:
+        prefer: ["gnmi", "netconf", "ssh"]
+        require: ["gnmi"]
+        fallback: false
+  collect_service_interfaces_post:
+    name: collect_service_interfaces_post
+    collect:
+      into: service_interfaces_post
+      targets: ["service_plane"]
+      operation: get_interfaces
+      transport:
+        prefer: ["netconf", "gnmi", "ssh"]
+        require: ["netconf"]
+        fallback: false
+  collect_access_cli_post:
+    name: collect_access_cli_post
+    collect:
+      into: access_cli_post
+      targets: ["access_plane"]
+      command: show version | as json
+      transforms:
+        run_command:
+          format: json
+      transport:
+        prefer: ["ssh"]
+        require: ["ssh"]
+        fallback: false
+phases:
+  - name: pre
+    use:
+      - collect_control_version
+      - collect_service_interfaces
+      - collect_access_cli
+    steps:
+      - name: assert_control_version_equals
+        assert:
+          name: expected_control_version
+          from: ["control_versions"]
+          scope: per_record
+          check:
+            type: equals
+            path: payload.software_version
+            value: v24.10.6-209-g06fd1920785
+
+      - name: assert_service_interfaces_count
+        assert:
+          name: minimum_service_interfaces_up
+          from: ["service_interfaces"]
+          scope: per_record
+          check:
+            type: count_gte
+            path: payload
+            filter: '.oper_status == "UP"'
+            count: 3
+
+      - name: assert_protocol_collection
+        assert:
+          name: all_protocols_collected
+          from: ["control_versions", "service_interfaces", "access_cli"]
+          scope: aggregate
+          check:
+            type: count_eq
+            path: records
+            count: 3
+          message: verify protocol reachability before continuing
+
+      - name: assert_primary_backup_delta
+        assert:
+          inputs:
+            primary:
+              evidence: control_versions
+              group: control_plane
+              alias: primary
+            backup:
+              evidence: service_interfaces
+              group: service_plane
+              alias: backup
+          compare:
+            - name: primary_backup_balance
+              left:
+                evidence: control_versions
+                group: control_plane
+              right:
+                evidence: service_interfaces
+                group: service_plane
+          scope: aggregate
+          check:
+            type: delta_within
+            reduce: count
+            tolerance: 1000
+          severity: warning
+          message: compare primary and backup aggregate state before maintenance
+
+      - name: assert_access_cli_ready
+        assert:
+          name: access_cli_payload_present
+          from: ["access_cli"]
+          scope: per_record
+          expr: ".payload != null"
+        converge:
+          until: assertions_pass
+          interval: 15s
+          timeout: 5m
+          minPasses: 2
+          stabilizeFor: 30s
+
+  - name: post
+    use:
+      - collect_control_version_post
+      - collect_service_interfaces_post
+      - collect_access_cli_post
+    steps:
+      - name: assert_control_version_same_across_post
+        assert:
+          name: control_version_stable_post
+          from: ["control_versions_post"]
+          scope: aggregate
+          check:
+            type: same_across
+            path: records[].payload.software_version
+
+      - name: assert_service_interfaces_post
+        assert:
+          name: minimum_service_interfaces_up_post
+          from: ["service_interfaces_post"]
+          scope: per_record
+          check:
+            type: count_gte
+            path: payload
+            filter: '.oper_status == "UP"'
+            count: 3
+
+      - name: assert_access_cli_post
+        assert:
+          name: access_cli_payload_present_post
+          from: ["access_cli_post"]
+          scope: per_record
+          expr: ".payload != null"
+        converge:
+          until: assertions_pass
+          interval: 15s
+          timeout: 5m
+          minPasses: 2
+          stabilizeFor: 30s
+
+---
+kind: tools
+name: start_validation_run
+type: validation-run-start
+description: >-
+  Submit a durable sqlite-backed validation run and return a run ID immediately.
+authRequired:
+  - noc-keycloak
+
+---
+kind: tools
+name: validation_run_status
+type: validation-run-status
+description: >-
+  Poll the normalized persisted status and event log for a durable validation run.
+authRequired:
+  - noc-keycloak
+
+---
+kind: tools
+name: validation_run_result
+type: validation-run-result
+description: >-
+  Fetch the stored terminal result for a durable sqlite-backed validation run.
+authRequired:
+  - noc-keycloak
+
+---
+kind: tools
+name: cancel_validation_run
+type: validation-run-cancel
+description: >-
+  Request cancellation for an active durable validation run.
+authRequired:
+  - noc-keycloak
+
+---
+kind: prompts
+name: summarize_validation_run
+description: >-
+  Summarize a validation run result for a network operator and highlight next actions.
+arguments:
+  - name: validation_result
+    description: JSON payload returned by validation_run_result.
+messages:
+  - role: user
+    content: |
+      Summarize this validation run for a network operator.
+      Highlight scope, failing steps, retries, and recommended next actions.
+
+      Validation result payload:
+      {{.validation_result}}
+
+---
+kind: promptsets
+name: validation-run-guidance
+prompts:
+  - summarize_validation_run
+
+---
+kind: toolsets
+name: validation-run-workflow
+description: >-
+  Durable validation workflow for starting, monitoring, retrieving, and summarizing validation runs.
+promptset: validation-run-guidance
+tools:
+  - start_validation_run
+  - validation_run_status
+  - validation_run_result
+  - cancel_validation_run

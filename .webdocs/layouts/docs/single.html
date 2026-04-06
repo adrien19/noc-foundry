@@ -1,0 +1,7 @@
+{{ define "main" }}
+<div class="td-content">
+  {{ partial "navbar-version-selector.html" . }}
+  {{ partial "page-meta-links.html" . }}
+  {{ .Content }}
+</div>
+{{ end }}

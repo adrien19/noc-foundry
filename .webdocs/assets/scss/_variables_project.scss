@@ -1,0 +1,51 @@
+$clr-dark-a0: #000000;
+$clr-light-a0: #ffffff;
+
+$clr-primary-a0: #0060ad;
+$clr-primary-a10: #3a70b6;
+$clr-primary-a20: #5880bf;
+$clr-primary-a30: #7291c9;
+$clr-primary-a40: #8ba3d2;
+$clr-primary-a50: #a2b5db;
+
+$clr-surface-a0: #121212;
+$clr-surface-a10: #282828;
+$clr-surface-a20: #3f3f3f;
+$clr-surface-a30: #575757;
+$clr-surface-a40: #717171;
+$clr-surface-a50: #8b8b8b;
+
+$clr-surface-tonal-a0: #171920;
+$clr-surface-tonal-a10: #2c2e35;
+$clr-surface-tonal-a20: #43444b;
+$clr-surface-tonal-a30: #5b5c62;
+$clr-surface-tonal-a40: #74757a;
+$clr-surface-tonal-a50: #8e8f93;
+
+$clr-success-a0: #22946e;
+$clr-success-a10: #47d5a6;
+$clr-success-a20: #9ae8ce;
+
+$clr-warning-a0: #a87a2a;
+$clr-warning-a10: #d7ac61;
+$clr-warning-a20: #ecd7b2;
+
+$clr-danger-a0: #9c2121;
+$clr-danger-a10: #d94a4a;
+$clr-danger-a20: #eb9e9e;
+
+$clr-info-a0: #21498a;
+$clr-info-a10: #4077d1;
+$clr-info-a20: #92b2e5;
+
+$primary: $clr-primary-a0;
+$secondary: $clr-surface-tonal-a20;
+$success: $clr-success-a0;
+$warning: $clr-warning-a0;
+$danger: $clr-danger-a0;
+$info: $clr-info-a0;
+$body-bg: $clr-light-a0;
+$body-color: $clr-surface-tonal-a0;
+$link-color: $clr-primary-a0;
+$navbar-dark-color: rgba(255, 255, 255, 0.92);
+$navbar-dark-hover-color: #ffffff;

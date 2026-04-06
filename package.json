@@ -1,0 +1,8 @@
+{
+  "name": "noc-foundry",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:ui-js": "node --test internal/server/static/js/*.test.js"
+  }
+}

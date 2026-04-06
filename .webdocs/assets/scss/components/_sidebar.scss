@@ -1,0 +1,16 @@
+.td-sidebar-nav {
+  font-size: 0.96rem;
+  color: var(--nf-page-text);
+}
+
+.td-sidebar-nav__section-title,
+.td-sidebar-nav__section .td-sidebar-link {
+  letter-spacing: -0.01em;
+  color: var(--nf-page-text);
+}
+
+.td-sidebar-nav__section .td-sidebar-link:hover,
+.td-sidebar-nav__section .td-sidebar-link:focus,
+.td-sidebar-nav__section .td-sidebar-link.active {
+  color: var(--nf-link);
+}
