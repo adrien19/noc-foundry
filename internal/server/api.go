@@ -323,7 +323,8 @@ func toolInvokeHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 			switch tbErr.Category() {
 			case util.CategoryAgent:
 				// Agent Errors -> 200 OK
-				s.logger.DebugContext(ctx, fmt.Sprintf("Tool invocation agent error: %v", err))
+				// Avoid logging full error to prevent leaking sensitive details from source configs.
+				s.logger.DebugContext(ctx, "Tool invocation agent error")
 				res = map[string]string{
 					"error": err.Error(),
 				}
@@ -351,7 +352,8 @@ func toolInvokeHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 					statusCode = http.StatusInternalServerError
 				}
 
-				s.logger.ErrorContext(ctx, fmt.Sprintf("Tool invocation server error: %v", err))
+				// Avoid logging full error to prevent leaking sensitive details from source configs.
+				s.logger.ErrorContext(ctx, "Tool invocation server error")
 				_ = render.Render(w, r, newErrResponse(err, statusCode))
 				return
 			}
