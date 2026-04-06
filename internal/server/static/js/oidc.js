@@ -339,7 +339,13 @@ export async function handleAuthCallback() {
     clearSignedOutMarker();
     setStatus("Login complete. Redirecting...");
     const safeReturnUrl = getSafeReturnUrl(txn.returnUrl);
-    window.location.replace(safeReturnUrl || "/ui/tools");
+    // Inline guard so static analysis (CodeQL js/xss-through-dom) can
+    // verify the navigated value is a safe relative path.
+    if (safeReturnUrl && safeReturnUrl.startsWith("/") && !safeReturnUrl.startsWith("//")) {
+      window.location.replace(safeReturnUrl);
+    } else {
+      window.location.replace("/ui/tools");
+    }
   } catch (error) {
     clearAuthSession();
     saveSignedOutMarker();

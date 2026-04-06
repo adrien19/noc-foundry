@@ -110,24 +110,24 @@ func generateSkillMarkdown(spec skillSpec, envVars map[string]string) (string, e
 	var sb strings.Builder
 
 	sb.WriteString("---\n")
-	sb.WriteString(fmt.Sprintf("name: %s\n", spec.Name))
-	sb.WriteString(fmt.Sprintf("description: %s\n", spec.Description))
+	fmt.Fprintf(&sb, "name: %s\n", spec.Name)
+	fmt.Fprintf(&sb, "description: %s\n", spec.Description)
 	sb.WriteString("---\n\n")
 
 	sb.WriteString("## Overview\n\n")
-	sb.WriteString(fmt.Sprintf("This agent skill packages the `%s` network operations workflow for NOCFoundry.\n\n", spec.ToolsetName))
+	fmt.Fprintf(&sb, "This agent skill packages the `%s` network operations workflow for NOCFoundry.\n\n", spec.ToolsetName)
 	if spec.PromptsetName != "" {
-		sb.WriteString(fmt.Sprintf("It includes the `%s` promptset so an agent can pair executable steps with workflow-specific reasoning guidance.\n\n", spec.PromptsetName))
+		fmt.Fprintf(&sb, "It includes the `%s` promptset so an agent can pair executable steps with workflow-specific reasoning guidance.\n\n", spec.PromptsetName)
 	}
 
 	sb.WriteString("## Preconditions\n\n")
 	sb.WriteString("- `nocfoundry` must be available in `PATH`.\n")
 	sb.WriteString("- Run commands from the generated skill directory so relative `assets/` paths resolve correctly.\n")
 	if len(spec.ExecutionArgs) > 0 {
-		sb.WriteString(fmt.Sprintf("- Base config arguments: `%s`\n", strings.Join(spec.ExecutionArgs, " ")))
+		fmt.Fprintf(&sb, "- Base config arguments: `%s`\n", strings.Join(spec.ExecutionArgs, " "))
 	}
 	if len(spec.EnvVarNames) > 0 {
-		sb.WriteString(fmt.Sprintf("- Provide environment values for: `%s`.\n", strings.Join(spec.EnvVarNames, "`, `")))
+		fmt.Fprintf(&sb, "- Provide environment values for: `%s`.\n", strings.Join(spec.EnvVarNames, "`, `"))
 	}
 	if len(spec.Prompts) > 0 {
 		sb.WriteString("- Prompts are bundle-native guidance for agents; NOCFoundry does not execute them directly.\n")
@@ -136,9 +136,9 @@ func generateSkillMarkdown(spec skillSpec, envVars map[string]string) (string, e
 
 	sb.WriteString("## Workflow\n\n")
 	for idx, binding := range spec.Tools {
-		sb.WriteString(fmt.Sprintf("%d. %s: `%s`\n", idx+1, workflowStepLabel(binding.Tool), binding.Name))
+		fmt.Fprintf(&sb, "%d. %s: `%s`\n", idx+1, workflowStepLabel(binding.Tool), binding.Name)
 		if desc := binding.Tool.Manifest().Description; desc != "" {
-			sb.WriteString(fmt.Sprintf("   %s\n", desc))
+			fmt.Fprintf(&sb, "   %s\n", desc)
 		}
 	}
 	sb.WriteString("\n")
@@ -153,11 +153,11 @@ func generateSkillMarkdown(spec skillSpec, envVars map[string]string) (string, e
 	sb.WriteString("## Tools\n\n")
 	for _, binding := range spec.Tools {
 		manifest := binding.Tool.Manifest()
-		sb.WriteString(fmt.Sprintf("### %s\n\n", binding.Name))
+		fmt.Fprintf(&sb, "### %s\n\n", binding.Name)
 		if manifest.Description != "" {
-			sb.WriteString(fmt.Sprintf("%s\n\n", manifest.Description))
+			fmt.Fprintf(&sb, "%s\n\n", manifest.Description)
 		}
-		sb.WriteString(fmt.Sprintf("Safety: %s\n\n", safetySummary(binding.Tool)))
+		fmt.Fprintf(&sb, "Safety: %s\n\n", safetySummary(binding.Tool))
 		sb.WriteString("Invoke:\n\n")
 		sb.WriteString("```bash\n")
 		sb.WriteString(buildInvokeExample(spec.ExecutionArgs, binding.Name))
@@ -176,9 +176,9 @@ func generateSkillMarkdown(spec skillSpec, envVars map[string]string) (string, e
 		sb.WriteString("## Prompts\n\n")
 		for _, binding := range spec.Prompts {
 			manifest := binding.Prompt.Manifest()
-			sb.WriteString(fmt.Sprintf("### %s\n\n", binding.Name))
+			fmt.Fprintf(&sb, "### %s\n\n", binding.Name)
 			if manifest.Description != "" {
-				sb.WriteString(fmt.Sprintf("%s\n\n", manifest.Description))
+				fmt.Fprintf(&sb, "%s\n\n", manifest.Description)
 			}
 			argsTable, err := formatParameters(manifest.Arguments, nil)
 			if err != nil {
@@ -192,7 +192,7 @@ func generateSkillMarkdown(spec skillSpec, envVars map[string]string) (string, e
 			if len(messages) > 0 {
 				sb.WriteString("#### Template Messages\n\n")
 				for _, msg := range messages {
-					sb.WriteString(fmt.Sprintf("- `%s`: %s\n", msg.Role, msg.Content))
+					fmt.Fprintf(&sb, "- `%s`: %s\n", msg.Role, msg.Content)
 				}
 				sb.WriteString("\n")
 			}
