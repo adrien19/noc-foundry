@@ -42,10 +42,10 @@ curl http://127.0.0.1:5000
 go test -race -v ./cmd/... ./internal/...
 ```
 
-1. Targeted integration tests:
+1. Targeted integration tests (require containerlab + Docker):
 
 ```bash
-go test -race -v ./tests/<source_dir>
+CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/<source_dir>
 ```
 
 1. Lint:

@@ -40,9 +40,9 @@ This file (symlinked as `CLAUDE.md` and `AGENTS.md`) provides context and guidel
 ### Testing
 
 - **Unit Tests:** `go test -race -v ./cmd/... ./internal/...`
-- **Integration Tests:**
-  - Run specific source tests: `go test -race -v ./tests/<source_dir>`
-  - Example: `go test -race -v ./tests/nokia`
+- **Integration Tests (require containerlab + Docker):**
+  - Run specific source tests: `CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/<source_dir>`
+  - Example: `CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/nokia`
   - Add new sources to `.ci/integration.<vendor>.yaml`
 - **Linting:** `golangci-lint run --fix`
 

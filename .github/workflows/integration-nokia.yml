@@ -1,0 +1,47 @@
+name: integration-nokia
+
+on:
+  schedule:
+    - cron: "0 6 * * 1-5"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "internal/sources/ssh/**"
+      - "internal/sources/gnmi/**"
+      - "internal/sources/netconf/**"
+      - "internal/tools/nokia/**"
+      - "internal/network/**"
+      - "tests/nokia/**"
+      - ".github/workflows/integration-nokia.yml"
+
+concurrency:
+  group: integration-nokia-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  nokia-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+
+      - name: Pull SR Linux image
+        run: docker pull ghcr.io/nokia/srlinux:24.10
+
+      - name: Install containerlab
+        run: |
+          bash -c "$(curl -sL https://get.containerlab.dev)"
+          sudo usermod -aG clab_admins "$(whoami)" || true
+
+      - name: Run Nokia integration tests
+        run: |
+          sg clab_admins -c 'CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/nokia/'

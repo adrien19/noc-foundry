@@ -1,0 +1,24 @@
+# Minimal 2-node topology for integration tests (1 leaf + 1 spine).
+# Provides SSH, gNMI, and NETCONF on both devices with a single fabric link.
+name: noc-foundry-integration
+
+mgmt:
+  network: noc-foundry-integration
+  ipv4-subnet: 172.31.251.0/24
+
+topology:
+  defaults:
+    kind: nokia_srlinux
+    image: ghcr.io/nokia/srlinux:24.10
+
+  nodes:
+    leaf1:
+      mgmt-ipv4: 172.31.251.11
+      startup-config: configs/leaf1.cli
+
+    spine1:
+      mgmt-ipv4: 172.31.251.12
+      startup-config: configs/spine1.cli
+
+  links:
+    - endpoints: ["leaf1:e1-1", "spine1:e1-1"]

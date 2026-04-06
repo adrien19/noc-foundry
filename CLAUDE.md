@@ -40,9 +40,9 @@ This file (should be same file as `CLAUDE.md` and `AGENTS.md`) provides context 
 ### Testing
 
 - **Unit Tests:** `go test -race -v ./cmd/... ./internal/...`
-- **Integration Tests:**
-  - Run specific source tests: `go test -race -v ./tests/<source_dir>`
-  - Example: `go test -race -v ./tests/nokia`
+- **Integration Tests (require containerlab + Docker):**
+  - Run specific source tests: `CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/<source_dir>`
+  - Example: `CGO_ENABLED=1 go test -tags integration -race -v -timeout 10m ./tests/nokia`
   - Add new sources to `.ci/integration.<vendor>.yaml`
 - **Linting:** `golangci-lint run --fix`
 
@@ -99,7 +99,7 @@ This file (should be same file as `CLAUDE.md` and `AGENTS.md`) provides context 
 
 - If it's a common tool accross all vendors, create a new directory: `internal/tools/common/<toolname>`.
 
-2. Define `Config` and `Tool` structs.
+1. Define `Config` and `Tool` structs.
 2. Implement `ToolConfig` interface (`ToolConfigType`, `Initialize`).
 3. Implement `Tool` interface (`Invoke`, `ParseParams`, `Manifest`, `McpManifest`, `Authorized`).
 4. Implement `init()` to register the tool.
