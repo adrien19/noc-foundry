@@ -94,7 +94,7 @@ func (c Config) SourceConfigType() string {
 func (c Config) Initialize(ctx context.Context, tracer trace.Tracer) (sources.Source, error) {
 	if tracer != nil {
 		var span trace.Span
-		ctx, span = sources.InitConnectionSpan(ctx, tracer, SourceType, c.Name)
+		_, span = sources.InitConnectionSpan(ctx, tracer, SourceType, c.Name)
 		defer span.End()
 	}
 

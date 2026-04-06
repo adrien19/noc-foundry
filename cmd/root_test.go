@@ -583,7 +583,7 @@ func tmpFileWithCleanup(content []byte) (string, func(), error) {
 	if err != nil {
 		return "", nil, err
 	}
-	cleanup := func() { os.Remove(f.Name()) }
+	cleanup := func() { _ = os.Remove(f.Name()) }
 
 	if _, err := f.Write(content); err != nil {
 		cleanup()
@@ -601,8 +601,8 @@ func TestSingleEdit(t *testing.T) {
 	defer cancelCtx()
 
 	pr, pw := io.Pipe()
-	defer pw.Close()
-	defer pr.Close()
+	defer func() { _ = pw.Close() }()
+	defer func() { _ = pr.Close() }()
 
 	fileToWatch, cleanup, err := tmpFileWithCleanup([]byte("initial content"))
 	if err != nil {

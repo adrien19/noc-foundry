@@ -1046,7 +1046,7 @@ func TestSseEndpoint(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unable to run sse request: %s", err)
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			if gotContentType := resp.Header.Get("Content-type"); gotContentType != contentType {
 				t.Fatalf("unexpected content-type header: want %s, got %s", contentType, gotContentType)

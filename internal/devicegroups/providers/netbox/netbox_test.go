@@ -127,7 +127,7 @@ func TestDiscoverBasic(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -195,7 +195,7 @@ func TestDiscoverPagination(t *testing.T) {
 					{ID: 1, Name: "r1", PrimaryIP: &apiIP{Address: "10.0.0.1"}},
 				},
 			}
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 1:
 			resp := apiResponse{
 				Count: 2,
@@ -204,7 +204,7 @@ func TestDiscoverPagination(t *testing.T) {
 					{ID: 2, Name: "r2", PrimaryIP: &apiIP{Address: "10.0.0.2"}},
 				},
 			}
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	}))
 	defer srv.Close()
@@ -238,7 +238,7 @@ func TestDiscoverSkipsDevicesWithoutIP(t *testing.T) {
 				{ID: 3, Name: "", PrimaryIP: &apiIP{Address: "10.0.0.3"}}, // no name, skipped
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -283,7 +283,7 @@ func TestDiscoverWithFilters(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedParams = r.URL.RawQuery
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(apiResponse{Count: 0, Results: []apiDevice{}})
+		_ = json.NewEncoder(w).Encode(apiResponse{Count: 0, Results: []apiDevice{}})
 	}))
 	defer srv.Close()
 

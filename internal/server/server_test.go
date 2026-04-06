@@ -123,7 +123,7 @@ func TestServe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error when sending a request: %s", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 {
 		t.Fatalf("response status code is not 200")
 	}

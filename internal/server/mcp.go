@@ -434,7 +434,7 @@ func sseHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 	}
 	messageEndpoint := fmt.Sprintf("%s://%s/mcp%s?sessionId=%s", proto, r.Host, toolsetURL, sessionId)
 	s.logger.DebugContext(ctx, fmt.Sprintf("sending endpoint event: %s", messageEndpoint))
-	fmt.Fprintf(w, "event: endpoint\ndata: %s\n\n", messageEndpoint)
+	_, _ = fmt.Fprintf(w, "event: endpoint\ndata: %s\n\n", messageEndpoint)
 	flusher.Flush()
 
 	clientClose := r.Context().Done()
@@ -442,7 +442,7 @@ func sseHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 		select {
 		// Ensure that only a single responses are written at once
 		case event := <-session.eventQueue:
-			fmt.Fprint(w, event)
+			_, _ = fmt.Fprint(w, event)
 			s.logger.DebugContext(ctx, fmt.Sprintf("sending event: %s", event))
 			flusher.Flush()
 			// channel for client disconnection

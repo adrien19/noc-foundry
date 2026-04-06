@@ -48,7 +48,6 @@ type durableTaskManager struct {
 	worker   dtbackend.TaskHubWorker
 	ctx      context.Context
 	cancel   context.CancelFunc
-	mu       sync.Mutex
 	wg       sync.WaitGroup
 }
 

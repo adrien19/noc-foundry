@@ -168,7 +168,9 @@ func runInvoke(cmd *cobra.Command, args []string, opts *internal.NOCFoundryOptio
 		opts.Logger.ErrorContext(ctx, errMsg.Error())
 		return errMsg
 	}
-	fmt.Fprintln(opts.IOStreams.Out, string(output))
+	if _, err := fmt.Fprintln(opts.IOStreams.Out, string(output)); err != nil {
+		return err
+	}
 
 	return nil
 }

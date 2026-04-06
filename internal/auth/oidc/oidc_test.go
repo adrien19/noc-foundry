@@ -71,10 +71,10 @@ func mockOIDCServer(t *testing.T, key *rsaTestKey) *httptest.Server {
 				"id_token_signing_alg_values_supported": []string{"RS256"},
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(doc)
+			_ = json.NewEncoder(w).Encode(doc)
 		case "/keys":
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(jwksFromKey(key))
+			_ = json.NewEncoder(w).Encode(jwksFromKey(key))
 		default:
 			http.NotFound(w, r)
 		}

@@ -211,7 +211,7 @@ func (s *Source) dial(ctx context.Context) (*ssh.Client, error) {
 	defer stopWatch()
 	c, chans, reqs, err := ssh.NewClientConn(conn, s.addr, s.sshConfig)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to connect to SSH source %q at %s: %w", s.Name, s.addr, err)
 	}
 	client := ssh.NewClient(c, chans, reqs)
@@ -244,7 +244,7 @@ func (s *Source) reconnect(ctx context.Context, staleClient *ssh.Client) (*ssh.C
 		return s.client, nil
 	}
 	if s.client != nil {
-		s.client.Close()
+		_ = s.client.Close()
 		s.client = nil
 	}
 	client, err := s.dial(ctx)
@@ -279,7 +279,7 @@ func (s *Source) RunCommand(ctx context.Context, command string) (string, error)
 			return "", fmt.Errorf("failed to create SSH session after reconnect: %w", err)
 		}
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	var stdout, stderr bytes.Buffer
 	session.Stdout = &stdout

@@ -259,7 +259,7 @@ func watchChanges(ctx context.Context, watchDirs map[string]bool, watchedFiles m
 		return
 	}
 
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 
 	watchingFolder := false
 	var folderToWatch string

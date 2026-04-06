@@ -191,7 +191,7 @@ func (s *Source) RunRequest(req *http.Request) (any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error making HTTP request: %s", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var body []byte
 	body, err = io.ReadAll(resp.Body)

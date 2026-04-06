@@ -154,8 +154,8 @@ type Tool struct {
 // Invoke executes the get_interfaces operation.
 func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, params parameters.ParamValues, accessToken tools.AccessToken) (any, util.NOCFoundryError) {
 	// Single-source mode: direct execution
-	if t.Config.Source != "" {
-		return t.invokeSingle(ctx, resourceMgr, t.Config.Source)
+	if t.Source != "" {
+		return t.invokeSingle(ctx, resourceMgr, t.Source)
 	}
 
 	// Selector mode: resolve devices and execute
@@ -176,7 +176,7 @@ func (t Tool) invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider
 }
 
 func (t Tool) invokeWithSelector(ctx context.Context, resourceMgr tools.SourceProvider, params parameters.ParamValues) (any, util.NOCFoundryError) {
-	sel := t.Config.SourceSelector
+	sel := t.SourceSelector
 
 	// Check if caller specified a device name for targeted query
 	deviceName := ""

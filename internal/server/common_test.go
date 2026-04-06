@@ -224,7 +224,7 @@ func runRequest(ts *httptest.Server, method, path string, body io.Reader, header
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to read request body: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return resp, respBody, nil
 }

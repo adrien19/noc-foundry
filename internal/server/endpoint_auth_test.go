@@ -406,7 +406,7 @@ func TestMCPEndpointAuthAndSessionBinding(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runSSERequestWithHeaders() error: %v", err)
 	}
-	defer sseResp.Body.Close()
+	defer func() { _ = sseResp.Body.Close() }()
 	if sseResp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", sseResp.StatusCode)
 	}
@@ -431,7 +431,7 @@ func TestMCPEndpointAuthAndSessionBinding(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runSSERequestWithHeaders() error: %v", err)
 	}
-	defer sseResp.Body.Close()
+	defer func() { _ = sseResp.Body.Close() }()
 	if sseResp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", sseResp.StatusCode)
 	}

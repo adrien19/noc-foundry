@@ -279,8 +279,7 @@ runLoop:
 		})
 		return
 	}
-	completedStatus := StatusCompleted
-	completedStatus = extractValidationStatus(raw)
+	completedStatus := extractValidationStatus(raw)
 	summary = extractValidationSummary(raw)
 	if summary == "" {
 		if completedStatus == StatusFailed {

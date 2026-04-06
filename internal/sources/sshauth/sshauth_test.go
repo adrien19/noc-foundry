@@ -100,7 +100,7 @@ func TestBuildAuthMethodsKeyPath(t *testing.T) {
 	if _, err := f.WriteString(testKeyPEM); err != nil {
 		t.Fatalf("writing temp key file: %v", err)
 	}
-	f.Close()
+	_ = f.Close()
 
 	methods, err := sshauth.BuildAuthMethods("", sshauth.KeyAuth{Path: f.Name()})
 	if err != nil {

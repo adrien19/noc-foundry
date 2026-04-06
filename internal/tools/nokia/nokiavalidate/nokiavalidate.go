@@ -675,15 +675,7 @@ func (cfg Config) expandProfilesAndTemplates() (Config, error) {
 }
 
 func stepFromTemplate(st StepTemplate) Step {
-	return Step{
-		Name:        st.Name,
-		Description: st.Description,
-		Collect:     st.Collect,
-		Assert:      st.Assert,
-		Retry:       st.Retry,
-		Converge:    st.Converge,
-		FailFast:    st.FailFast,
-	}
+	return Step(st)
 }
 
 func (cfg Config) compileConfig(srcs map[string]sources.Source) (compiledConfig, error) {
@@ -1463,13 +1455,6 @@ func getCapabilities(source sources.Source) capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{}
 }
 
-func (t Tool) runStep(ctx context.Context, resourceMgr tools.SourceProvider, step compiledStep, groups map[string][]ResolvedTarget, store *EvidenceStore) (StepResult, error) {
-	if step.collect != nil {
-		return t.runCollectStep(ctx, resourceMgr, step, groups, store)
-	}
-	return t.runAssertStep(ctx, step, store)
-}
-
 func (t Tool) runCompiledPlanStep(ctx context.Context, resourceMgr tools.SourceProvider, step compiledRunStep, store *EvidenceStore) (StepResult, map[string]json.RawMessage, collectFailureCategory, error) {
 	if step.Collect != nil {
 		attempt, err := t.collectEvidenceFromPlans(ctx, resourceMgr, step.Collect)
@@ -1495,24 +1480,6 @@ func (t Tool) runCompiledPlanStep(ctx context.Context, resourceMgr tools.SourceP
 	}
 	result, err := t.runCompiledAssertStep(ctx, step, store)
 	return result, nil, collectFailureNone, err
-}
-
-func (t Tool) runCollectStep(ctx context.Context, resourceMgr tools.SourceProvider, step compiledStep, groups map[string][]ResolvedTarget, store *EvidenceStore) (StepResult, error) {
-	attempt, err := t.collectEvidence(ctx, resourceMgr, step.collect, groups)
-	if err != nil {
-		return StepResult{}, err
-	}
-	store.Put(step.collect.spec.Into, attempt.Evidence)
-	return StepResult{
-		Name:           step.Name,
-		Kind:           StepKindCollect,
-		Status:         attempt.Status,
-		Code:           attempt.Code,
-		Summary:        fmt.Sprintf("collected %d records into %q", attempt.Evidence.Summary.Total, step.collect.spec.Into),
-		Groups:         slices.Clone(step.collect.spec.Targets),
-		Recommendation: attempt.Recommendation,
-		Attempts:       1,
-	}, nil
 }
 
 func (t Tool) collectEvidenceFromPlans(ctx context.Context, resourceMgr tools.SourceProvider, cc *compiledRunCollectStep) (collectAttemptResult, error) {
@@ -1593,123 +1560,6 @@ func (t Tool) collectEvidenceFromPlans(ctx context.Context, resourceMgr tools.So
 	}
 	evidence.Summary.Total = len(evidence.Records)
 	sort.Slice(evidence.Records, func(i, j int) bool { return evidence.Records[i].SourceName < evidence.Records[j].SourceName })
-	switch {
-	case evidence.Summary.Failed == 0:
-		return collectAttemptResult{Evidence: evidence, Status: StatusPass}, nil
-	case evidence.Summary.Succeeded == 0:
-		failureCategory := collectFailureNonRetryable
-		if allRetryable {
-			failureCategory = collectFailureRetryable
-		}
-		return collectAttemptResult{
-			Evidence:        evidence,
-			Status:          StatusFail,
-			Code:            "collection_failed",
-			Recommendation:  "verify transport and source capabilities for this step",
-			FailureCategory: failureCategory,
-		}, nil
-	default:
-		return collectAttemptResult{
-			Evidence:        evidence,
-			Status:          StatusPartial,
-			Code:            "collection_partial",
-			Recommendation:  "review failed collection records before continuing",
-			FailureCategory: collectFailureNonRetryable,
-		}, nil
-	}
-}
-
-func (t Tool) collectEvidence(ctx context.Context, resourceMgr tools.SourceProvider, cc *compiledCollect, groups map[string][]ResolvedTarget) (collectAttemptResult, error) {
-	targets, err := selectTargets(cc.spec.Targets, groups)
-	if err != nil {
-		return collectAttemptResult{}, err
-	}
-	if len(targets) == 0 {
-		return collectAttemptResult{}, fmt.Errorf("no targets resolved for evidence %q", cc.spec.Into)
-	}
-
-	plans := buildTransportPlans(targets, cc)
-	sourceNames := make([]string, 0, len(plans))
-	planBySource := make(map[string]transportPlan, len(plans))
-	evidence := Evidence{Name: cc.spec.Into}
-	allRetryable := true
-	for _, plan := range plans {
-		if plan.target.SourceName == "" {
-			evidence.Records = append(evidence.Records, EvidenceRecord{
-				DeviceID:      plan.target.DeviceID,
-				Labels:        cloneMap(plan.target.Labels),
-				Groups:        slices.Clone(plan.target.GroupNames),
-				Transport:     plan.target.Transport,
-				SelectedBy:    plan.selectedBy,
-				SelectionNote: plan.selectionNote,
-				Error:         plan.selectionNote,
-			})
-			evidence.Summary.Failed++
-			allRetryable = false
-			continue
-		}
-		sourceNames = append(sourceNames, plan.target.SourceName)
-		planBySource[plan.target.SourceName] = plan
-	}
-
-	if len(sourceNames) > 0 {
-		result := fanout.Execute(ctx, sourceNames, t.maxConcurrency(), func(ctx context.Context, sourceName string) (any, error) {
-			plan := planBySource[sourceName]
-			rawSource, ok := resourceMgr.GetSource(sourceName)
-			if !ok {
-				return nil, fmt.Errorf("source %q not found", sourceName)
-			}
-			exec := t.baseExecutor
-			if len(cc.spec.Transforms) > 0 {
-				exec = exec.WithTransforms(query.TransformSet(cc.spec.Transforms))
-			}
-			switch cc.mode {
-			case modeCommand:
-				record, err := exec.ExecuteCommand(ctx, rawSource, cc.spec.Command, sourceName)
-				if err != nil {
-					return nil, fmt.Errorf("%s: %w", plan.target.DeviceID, err)
-				}
-				return record, nil
-			default:
-				return exec.Execute(ctx, rawSource, cc.spec.Operation, sourceName)
-			}
-		})
-		if ctx.Err() != nil {
-			return collectAttemptResult{}, ctx.Err()
-		}
-
-		for _, item := range result.Results {
-			plan := planBySource[sourceNameForDevice(item.Device, sourceNames)]
-			rec := EvidenceRecord{
-				DeviceID:      item.Device,
-				SourceName:    plan.target.SourceName,
-				Labels:        cloneMap(plan.target.Labels),
-				Groups:        slices.Clone(plan.target.GroupNames),
-				Transport:     plan.target.Transport,
-				SelectedBy:    plan.selectedBy,
-				SelectionNote: plan.selectionNote,
-			}
-			if item.Status == "success" {
-				record, ok := item.Data.(*models.Record)
-				if !ok {
-					return collectAttemptResult{}, fmt.Errorf("unexpected collect result type %T", item.Data)
-				}
-				rec.Record = record
-				evidence.Summary.Succeeded++
-			} else {
-				rec.Error = item.Error
-				evidence.Summary.Failed++
-				if classifyCollectFailure(item.Error) != collectFailureRetryable {
-					allRetryable = false
-				}
-			}
-			evidence.Records = append(evidence.Records, rec)
-		}
-	}
-
-	evidence.Summary.Total = len(evidence.Records)
-	sort.Slice(evidence.Records, func(i, j int) bool { return evidence.Records[i].SourceName < evidence.Records[j].SourceName })
-
 	switch {
 	case evidence.Summary.Failed == 0:
 		return collectAttemptResult{Evidence: evidence, Status: StatusPass}, nil
@@ -1824,94 +1674,6 @@ func sourceNameForDevice(device string, sourceNames []string) string {
 		}
 	}
 	return device
-}
-
-func (t Tool) runAssertStep(ctx context.Context, step compiledStep, store *EvidenceStore) (StepResult, error) {
-	startedAt := time.Now()
-	passStreak := 0
-	observedFailures := 0
-	var firstPassAt *time.Time
-	var lastPassedAt *time.Time
-	var lastActual any
-	var last AssertionResult
-	maxAttempts := 1
-	if step.converge != nil {
-		maxAttempts = step.converge.maxAttempts
-	}
-
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		result, err := evaluateAssertion(&step.assert.spec, store)
-		if err != nil {
-			return StepResult{}, err
-		}
-		last = result
-		lastActual = result.Actual
-		if result.Status == StatusPass {
-			passStreak++
-			now := time.Now()
-			if firstPassAt == nil {
-				firstPassAt = &now
-			}
-			lastPassedAt = &now
-			if step.converge == nil || convergenceSatisfied(step.converge, passStreak, firstPassAt, now) {
-				return StepResult{
-					Name:       step.Name,
-					Kind:       StepKindAssert,
-					Status:     result.Status,
-					Summary:    fmt.Sprintf("assertion %q completed with status %s", result.Name, result.Status),
-					Assertions: []AssertionResult{result},
-					Attempts:   attempt,
-					Convergence: &ConvergenceResult{
-						Met:              true,
-						Attempts:         attempt,
-						PassStreak:       passStreak,
-						ObservedFailures: observedFailures,
-						StartedAt:        startedAt,
-						CompletedAt:      now,
-						LastPassedAt:     lastPassedAt,
-						LastActual:       lastActual,
-					},
-				}, nil
-			}
-		} else {
-			passStreak = 0
-			firstPassAt = nil
-			observedFailures++
-		}
-
-		if attempt < maxAttempts {
-			wait := intervalForAttempt(step.converge, attempt)
-			if !sleepWithContext(ctx, wait) {
-				break
-			}
-		}
-	}
-
-	outcome := OutcomeBlocked
-	if last.Severity != SeverityError {
-		outcome = OutcomeConverging
-	}
-	_ = outcome
-	return StepResult{
-		Name:       step.Name,
-		Kind:       StepKindAssert,
-		Status:     last.Status,
-		Code:       last.Code,
-		Summary:    fmt.Sprintf("assertion %q completed with status %s", last.Name, last.Status),
-		Assertions: []AssertionResult{last},
-		Attempts:   maxAttempts,
-		Convergence: &ConvergenceResult{
-			Met:              false,
-			Attempts:         maxAttempts,
-			PassStreak:       passStreak,
-			ObservedFailures: observedFailures,
-			StartedAt:        startedAt,
-			CompletedAt:      time.Now(),
-			LastPassedAt:     lastPassedAt,
-			LastActual:       lastActual,
-			TimeoutReached:   step.converge != nil,
-		},
-	}, nil
 }
 
 func (t Tool) runCompiledAssertStep(ctx context.Context, step compiledRunStep, store *EvidenceStore) (StepResult, error) {

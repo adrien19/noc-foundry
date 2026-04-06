@@ -190,7 +190,7 @@ func (p *Provider) fetchPage(ctx context.Context, requestURL string) ([]apiDevic
 	if err != nil {
 		return nil, "", fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))

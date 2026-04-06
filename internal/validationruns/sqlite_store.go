@@ -242,7 +242,7 @@ ORDER BY sequence ASC`
 	if err != nil {
 		return nil, fmt.Errorf("list validation run events: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	events := make([]RunEvent, 0)
 	for rows.Next() {
 		var event RunEvent
@@ -331,7 +331,7 @@ WHERE status IN (` + strings.Join(placeholders, ",") + `)`
 	if err != nil {
 		return nil, fmt.Errorf("list validation runs by status: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	runs := make([]RunRecord, 0)
 	for rows.Next() {
 		run, err := scanRunRows(rows)

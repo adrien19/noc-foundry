@@ -7,11 +7,6 @@ import (
 	"github.com/adrien19/noc-foundry/internal/auth"
 )
 
-func endpointAuthPolicyEnabled(cfg ServerAuthConfig, surface auth.EndpointSurface) bool {
-	policy, ok := cfg.EndpointPolicy(surface)
-	return ok && policy.Enabled
-}
-
 func ValidateAndApplyEndpointAuthConfig(cfg ServerAuthConfig, authServices map[string]auth.AuthService) error {
 	if err := ValidateServerAuthConfig(cfg); err != nil {
 		return err

@@ -51,9 +51,9 @@ func TestInvokeTool(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/hello":
-			fmt.Fprint(w, `{"greeting":"hello"}`)
+			_, _ = fmt.Fprint(w, `{"greeting":"hello"}`)
 		case "/echo":
-			fmt.Fprintf(w, `{"msg":"%s"}`, r.URL.Query().Get("message"))
+			_, _ = fmt.Fprintf(w, `{"msg":"%s"}`, r.URL.Query().Get("message"))
 		default:
 			http.NotFound(w, r)
 		}

@@ -318,8 +318,8 @@ func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, para
 
 	runtimeJQ := extractStringParam(params, "jq")
 
-	if t.Config.Source != "" {
-		return t.invokeSingle(ctx, resourceMgr, t.Config.Source, command, runtimeJQ)
+	if t.Source != "" {
+		return t.invokeSingle(ctx, resourceMgr, t.Source, command, runtimeJQ)
 	}
 	return t.invokeWithSelector(ctx, resourceMgr, params, command, runtimeJQ)
 }
@@ -329,16 +329,16 @@ func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, para
 // Predefined mode: expands the config template with runtime parameter values.
 // Ad-hoc mode:     returns the "command" parameter value directly.
 func (t Tool) resolveCommand(params parameters.ParamValues) (string, error) {
-	if t.Config.Command != "" {
-		vals := make(map[string]string, len(t.Config.ExtraParams))
-		for _, ep := range t.Config.ExtraParams {
+	if t.Command != "" {
+		vals := make(map[string]string, len(t.ExtraParams))
+		for _, ep := range t.ExtraParams {
 			val := extractStringParam(params, ep.Name)
 			if ep.isRequired() && val == "" {
 				return "", fmt.Errorf("missing required parameter %q", ep.Name)
 			}
 			vals[ep.Name] = val
 		}
-		return expandCommandTemplate(t.Config.Command, vals)
+		return expandCommandTemplate(t.Command, vals)
 	}
 
 	cmd := extractStringParam(params, "command")
@@ -363,7 +363,7 @@ func (t Tool) effectiveExecutor(runtimeJQ string) *query.Executor {
 		return t.executor
 	}
 	format := "text"
-	if spec, ok := t.Config.Transforms[query.OpRunCommand]; ok && spec.Format != "" {
+	if spec, ok := t.Transforms[query.OpRunCommand]; ok && spec.Format != "" {
 		format = spec.Format
 	}
 	return t.executor.WithTransforms(query.TransformSet{
@@ -386,7 +386,7 @@ func (t Tool) invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider
 }
 
 func (t Tool) invokeWithSelector(ctx context.Context, resourceMgr tools.SourceProvider, params parameters.ParamValues, command, runtimeJQ string) (any, util.NOCFoundryError) {
-	sel := t.Config.SourceSelector
+	sel := t.SourceSelector
 
 	deviceName := extractStringParam(params, "device")
 

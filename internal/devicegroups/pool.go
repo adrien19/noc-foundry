@@ -406,7 +406,7 @@ func (p *DevicePool) Close() {
 	defer p.mu.Unlock()
 	for _, s := range p.cache {
 		if closer, ok := s.(interface{ Close() error }); ok {
-			closer.Close()
+			_ = closer.Close()
 		}
 	}
 	p.cache = make(map[string]sources.Source)
@@ -419,7 +419,7 @@ func (p *DevicePool) EvictSource(name string) {
 	defer p.mu.Unlock()
 	if s, ok := p.cache[name]; ok {
 		if closer, ok := s.(interface{ Close() error }); ok {
-			closer.Close()
+			_ = closer.Close()
 		}
 		delete(p.cache, name)
 	}

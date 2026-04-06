@@ -10,15 +10,6 @@ import (
 	"github.com/adrien19/noc-foundry/internal/auth/oidc"
 )
 
-type stubNonOIDCAuthService struct{}
-
-func (s stubNonOIDCAuthService) AuthServiceType() string { return "stub" }
-func (s stubNonOIDCAuthService) GetName() string         { return "stub" }
-func (s stubNonOIDCAuthService) GetClaimsFromHeader(context.Context, http.Header) (map[string]any, error) {
-	return nil, nil
-}
-func (s stubNonOIDCAuthService) ToConfig() auth.AuthServiceConfig { return nil }
-
 type stubEndpointOIDCWithoutMetadataAuthService struct{}
 
 func (s stubEndpointOIDCWithoutMetadataAuthService) AuthServiceType() string { return "stub-oidc" }
