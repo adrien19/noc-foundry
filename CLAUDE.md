@@ -55,7 +55,7 @@ This file (should be same file as `CLAUDE.md` and `AGENTS.md`) provides context 
 
 ### Running Local Server
 
-1. Navigate to `.hugo` directory: `cd .hugo`
+1. Navigate to `.webdocs` directory: `cd .webdocs`
 2. Install dependencies: `npm ci`
 3. Start server: `hugo server`
 
@@ -96,12 +96,14 @@ This file (should be same file as `CLAUDE.md` and `AGENTS.md`) provides context 
 ### Adding a New Tool
 
 1. Create a new directory: `internal/tools/<vendor>/<toolname>`.
-  - If it's a common tool accross all vendors, create a new directory: `internal/tools/common/<toolname>`.
+
+- If it's a common tool accross all vendors, create a new directory: `internal/tools/common/<toolname>`.
+
 2. Define `Config` and `Tool` structs.
-3. Implement `ToolConfig` interface (`ToolConfigType`, `Initialize`).
-4. Implement `Tool` interface (`Invoke`, `ParseParams`, `Manifest`, `McpManifest`, `Authorized`).
-5. Implement `init()` to register the tool.
-6. Add unit tests.
+2. Implement `ToolConfig` interface (`ToolConfigType`, `Initialize`).
+3. Implement `Tool` interface (`Invoke`, `ParseParams`, `Manifest`, `McpManifest`, `Authorized`).
+4. Implement `init()` to register the tool.
+5. Add unit tests.
 
 ### Adding Documentation
 

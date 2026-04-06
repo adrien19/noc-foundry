@@ -55,7 +55,7 @@ This file (symlinked as `CLAUDE.md` and `AGENTS.md`) provides context and guidel
 
 ### Running Local Server
 
-1. Navigate to `.hugo` directory: `cd .hugo`
+1. Navigate to `.webdocs` directory: `cd .webdocs`
 2. Install dependencies: `npm ci`
 3. Start server: `hugo server`
 
@@ -96,14 +96,33 @@ This file (symlinked as `CLAUDE.md` and `AGENTS.md`) provides context and guidel
 ### Adding a New Tool
 
 1. Create a new directory: `internal/tools/<vendor>/<toolname>`.
-  - If it's a common tool accross all vendors, create a new directory: `internal/tools/common/<toolname>`.
-2. Define `Config` and `Tool` structs.
-3. Implement `ToolConfig` interface (`ToolConfigType`, `Initialize`).
-4. Implement `Tool` interface (`Invoke`, `ParseParams`, `Manifest`, `McpManifest`, `Authorized`).
-5. Implement `init()` to register the tool.
-6. Add unit tests.
+
+- If it's a common tool accross all vendors, create a new directory: `internal/tools/common/<toolname>`.
+
+1. Define `Config` and `Tool` structs.
+2. Implement `ToolConfig` interface (`ToolConfigType`, `Initialize`).
+3. Implement `Tool` interface (`Invoke`, `ParseParams`, `Manifest`, `McpManifest`, `Authorized`).
+4. Implement `init()` to register the tool.
+5. Add unit tests.
 
 ### Adding Documentation
 
 - Add source documentation to `docs/en/resources/sources/`.
 - Add tool documentation to `docs/en/resources/tools/`.
+
+### Decision Making
+
+When choosing between alternatives that affect more than today's task - a library, an architecture pattern, an API design, or deciding NOT to do something - log it:
+
+File: ./decisions/YYYY-MM-DD-{topic}.md
+Format:
+
+```md
+ ## Decision: {what you decided}
+ ## Context: {why this came up}
+ ## Alternatives considered: {what else was on the table}
+ ## Reasoning: {why this option won}
+ ## Trade-offs accepted: {what you gave up}
+```
+
+When about to make a similar decision, grep ./decisions/ for prior choices. Follow them unless new information invalidates the reasoning

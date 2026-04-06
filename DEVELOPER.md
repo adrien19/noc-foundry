@@ -16,19 +16,19 @@ This document describes development workflows for NOCFoundry.
 go build -o nocfoundry
 ```
 
-2. Show CLI flags:
+1. Show CLI flags:
 
 ```bash
 go run . --help
 ```
 
-3. Run server:
+1. Run server:
 
 ```bash
 go run .
 ```
 
-4. Verify endpoint:
+1. Verify endpoint:
 
 ```bash
 curl http://127.0.0.1:5000
@@ -42,13 +42,13 @@ curl http://127.0.0.1:5000
 go test -race -v ./cmd/... ./internal/...
 ```
 
-2. Targeted integration tests:
+1. Targeted integration tests:
 
 ```bash
 go test -race -v ./tests/<source_dir>
 ```
 
-3. Lint:
+1. Lint:
 
 ```bash
 golangci-lint run --fix
@@ -107,7 +107,7 @@ source: my_network_source
 ## Hugo Docs Preview
 
 ```bash
-cd .hugo
+cd .webdocs
 npm ci
 hugo server
 ```
