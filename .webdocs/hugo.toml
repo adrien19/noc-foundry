@@ -1,5 +1,5 @@
 title = "NOCFoundry Docs"
-baseURL = "https://docs.nocfoundry.dev/dev/"
+baseURL = "https://docs.nocfoundry.com/dev/"
 languageCode = "en-us"
 defaultContentLanguage = "en"
 defaultContentLanguageInSubdir = false
