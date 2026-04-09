@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Auth on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/auth/</link><description>Recent content in Auth on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/auth/index.xml" rel="self" type="application/rss+xml"/><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.dev/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Auth on NOCFoundry Docs</title><link>https://docs.nocfoundry.com/dev/auth/</link><description>Recent content in Auth on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.com/dev/auth/index.xml" rel="self" type="application/rss+xml"/><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
 &lt;p>NOCFoundry can protect the HTTP surfaces themselves, not just individual tool calls.&lt;/p>
 &lt;h2 id="protected-surfaces">Protected surfaces&lt;/h2>
 &lt;ul>
@@ -13,7 +13,7 @@
 &lt;li>only auth services selected by server policy can satisfy a protected surface&lt;/li>
 &lt;/ul>
 &lt;h2 id="metadata-and-rfc-9728">Metadata and RFC 9728&lt;/h2>
-&lt;p>NOCFoundry serves protected resource metadata for:&lt;/p></description></item><item><title>UI Login with Keycloak</title><link>https://docs.nocfoundry.dev/dev/auth/ui-login-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/auth/ui-login-keycloak/</guid><description>&lt;h1 id="ui-login-with-keycloak">UI Login with Keycloak&lt;/h1>
+&lt;p>NOCFoundry serves protected resource metadata for:&lt;/p></description></item><item><title>UI Login with Keycloak</title><link>https://docs.nocfoundry.com/dev/auth/ui-login-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/auth/ui-login-keycloak/</guid><description>&lt;h1 id="ui-login-with-keycloak">UI Login with Keycloak&lt;/h1>
 &lt;p>NOCFoundry’s browser UI acts as an OIDC public client and uses Authorization Code + PKCE to access the protected &lt;code>/api&lt;/code> surface.&lt;/p>
 &lt;h2 id="local-demo-flow">Local demo flow&lt;/h2>
 &lt;ol>

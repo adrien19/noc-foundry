@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/</link><description>Recent content on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/index.xml" rel="self" type="application/rss+xml"/><item><title>Local Quickstart</title><link>https://docs.nocfoundry.dev/dev/getting-started/local-quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/getting-started/local-quickstart/</guid><description>&lt;h1 id="local-quickstart">Local Quickstart&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>NOCFoundry Docs</title><link>https://docs.nocfoundry.com/dev/</link><description>Recent content on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.com/dev/index.xml" rel="self" type="application/rss+xml"/><item><title>Local Quickstart</title><link>https://docs.nocfoundry.com/dev/getting-started/local-quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/getting-started/local-quickstart/</guid><description>&lt;h1 id="local-quickstart">Local Quickstart&lt;/h1>
 &lt;p>This quickstart gets a local NOCFoundry instance running with the validation demo and UI.&lt;/p>
 &lt;h2 id="prerequisites">Prerequisites&lt;/h2>
 &lt;ul>
@@ -9,7 +9,7 @@
 &lt;h2 id="optional-start-the-local-sr-linux-topology">Optional: start the local SR Linux topology&lt;/h2>
 &lt;p>If you want to test against a realistic network fabric instead of static examples,
 use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/p>
-&lt;p>Install containerlab only when you need it:&lt;/p></description></item><item><title>MCP Client Quickstart</title><link>https://docs.nocfoundry.dev/dev/getting-started/mcp-client-quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/getting-started/mcp-client-quickstart/</guid><description>&lt;h1 id="mcp-client-quickstart">MCP Client Quickstart&lt;/h1>
+&lt;p>Install containerlab only when you need it:&lt;/p></description></item><item><title>MCP Client Quickstart</title><link>https://docs.nocfoundry.com/dev/getting-started/mcp-client-quickstart/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/getting-started/mcp-client-quickstart/</guid><description>&lt;h1 id="mcp-client-quickstart">MCP Client Quickstart&lt;/h1>
 &lt;p>NOCFoundry exposes the Model Context Protocol at:&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-text" data-lang="text">&lt;span class="line">&lt;span class="cl">http://127.0.0.1:5000/mcp
 &lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>With the protected validation example, &lt;code>/mcp&lt;/code> is protected by OIDC endpoint auth.&lt;/p>
@@ -29,7 +29,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>Supply &lt;code>Authorization: Bearer &amp;lt;token&amp;gt;&lt;/code> on every HTTP request.&lt;/li>
 &lt;/ol>
 &lt;h2 id="audience-reminder">Audience reminder&lt;/h2>
-&lt;p>The access token must match the &lt;code>/mcp&lt;/code> audience configured in:&lt;/p></description></item><item><title>Tool Catalogs</title><link>https://docs.nocfoundry.dev/dev/configuration/tool-catalogs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/tool-catalogs/</guid><description>&lt;h1 id="tool-catalogs">Tool Catalogs&lt;/h1>
+&lt;p>The access token must match the &lt;code>/mcp&lt;/code> audience configured in:&lt;/p></description></item><item><title>Tool Catalogs</title><link>https://docs.nocfoundry.com/dev/configuration/tool-catalogs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/tool-catalogs/</guid><description>&lt;h1 id="tool-catalogs">Tool Catalogs&lt;/h1>
 &lt;p>Tool catalogs define the operational resources NOCFoundry loads at startup.&lt;/p>
 &lt;h2 id="supported-catalog-flags">Supported catalog flags&lt;/h2>
 &lt;ul>
@@ -56,7 +56,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>embedding models&lt;/li>
 &lt;/ul>
 &lt;h2 id="prebuilt-catalogs">Prebuilt catalogs&lt;/h2>
-&lt;p>&lt;code>--prebuilt&lt;/code> takes a bundled catalog name, not an individual tool name.&lt;/p></description></item><item><title>Server Config</title><link>https://docs.nocfoundry.dev/dev/configuration/server-config/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/server-config/</guid><description>&lt;h1 id="server-config">Server Config&lt;/h1>
+&lt;p>&lt;code>--prebuilt&lt;/code> takes a bundled catalog name, not an individual tool name.&lt;/p></description></item><item><title>Server Config</title><link>https://docs.nocfoundry.com/dev/configuration/server-config/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/server-config/</guid><description>&lt;h1 id="server-config">Server Config&lt;/h1>
 &lt;p>&lt;code>--server-config&lt;/code> carries server-wide runtime policy that should not be owned by individual tool catalog files.&lt;/p>
 &lt;h2 id="current-focus">Current focus&lt;/h2>
 &lt;p>Today, the most important server config capabilities are:&lt;/p>
@@ -94,7 +94,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --server-config examples/server-configs/protected-api-mcp-ui.yaml &lt;span class="se">\
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --validation-config examples/validation-runtime-configs/durable-validation-sqlite.yaml &lt;span class="se">\
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --ui
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Validation Runtime</title><link>https://docs.nocfoundry.dev/dev/configuration/validation-runtime/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/validation-runtime/</guid><description>&lt;h1 id="validation-runtime">Validation Runtime&lt;/h1>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Validation Runtime</title><link>https://docs.nocfoundry.com/dev/configuration/validation-runtime/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/validation-runtime/</guid><description>&lt;h1 id="validation-runtime">Validation Runtime&lt;/h1>
 &lt;p>&lt;code>--validation-config&lt;/code> controls how validation runs are executed and stored.&lt;/p>
 &lt;h2 id="key-runtime-settings">Key runtime settings&lt;/h2>
 &lt;ul>
@@ -127,7 +127,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>&lt;code>sqlite&lt;/code> provides persistence for status, results, and events&lt;/li>
 &lt;/ul>
 &lt;h2 id="recommended-local-lab-setup">Recommended local lab setup&lt;/h2>
-&lt;p>For the protected validation example, use:&lt;/p></description></item><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.dev/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
+&lt;p>For the protected validation example, use:&lt;/p></description></item><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
 &lt;p>NOCFoundry can protect the HTTP surfaces themselves, not just individual tool calls.&lt;/p>
 &lt;h2 id="protected-surfaces">Protected surfaces&lt;/h2>
 &lt;ul>
@@ -142,7 +142,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>only auth services selected by server policy can satisfy a protected surface&lt;/li>
 &lt;/ul>
 &lt;h2 id="metadata-and-rfc-9728">Metadata and RFC 9728&lt;/h2>
-&lt;p>NOCFoundry serves protected resource metadata for:&lt;/p></description></item><item><title>UI Login with Keycloak</title><link>https://docs.nocfoundry.dev/dev/auth/ui-login-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/auth/ui-login-keycloak/</guid><description>&lt;h1 id="ui-login-with-keycloak">UI Login with Keycloak&lt;/h1>
+&lt;p>NOCFoundry serves protected resource metadata for:&lt;/p></description></item><item><title>UI Login with Keycloak</title><link>https://docs.nocfoundry.com/dev/auth/ui-login-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/auth/ui-login-keycloak/</guid><description>&lt;h1 id="ui-login-with-keycloak">UI Login with Keycloak&lt;/h1>
 &lt;p>NOCFoundry’s browser UI acts as an OIDC public client and uses Authorization Code + PKCE to access the protected &lt;code>/api&lt;/code> surface.&lt;/p>
 &lt;h2 id="local-demo-flow">Local demo flow&lt;/h2>
 &lt;ol>
@@ -166,7 +166,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>&lt;code>noc-foundry&lt;/code> for the resource-side auth service&lt;/li>
 &lt;li>&lt;code>noc-foundry-ui&lt;/code> for the browser PKCE client&lt;/li>
 &lt;/ul>
-&lt;p>The UI client must:&lt;/p></description></item><item><title>Validation Runs</title><link>https://docs.nocfoundry.dev/dev/workflows/validation-runs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/workflows/validation-runs/</guid><description>&lt;h1 id="validation-runs">Validation Runs&lt;/h1>
+&lt;p>The UI client must:&lt;/p></description></item><item><title>Validation Runs</title><link>https://docs.nocfoundry.com/dev/workflows/validation-runs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/workflows/validation-runs/</guid><description>&lt;h1 id="validation-runs">Validation Runs&lt;/h1>
 &lt;p>Validation runs provide a long-running execution model for multi-step network validation workflows.&lt;/p>
 &lt;p>Typical lifecycle:&lt;/p>
 &lt;ol>
@@ -181,7 +181,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>&lt;code>validation_run_status&lt;/code>&lt;/li>
 &lt;li>&lt;code>validation_run_result&lt;/code>&lt;/li>
 &lt;li>&lt;code>cancel_validation_run&lt;/code>&lt;/li>
-&lt;/ul></description></item><item><title>Skills</title><link>https://docs.nocfoundry.dev/dev/workflows/skills/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/workflows/skills/</guid><description>&lt;h1 id="skills">Skills&lt;/h1>
+&lt;/ul></description></item><item><title>Skills</title><link>https://docs.nocfoundry.com/dev/workflows/skills/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/workflows/skills/</guid><description>&lt;h1 id="skills">Skills&lt;/h1>
 &lt;p>NOCFoundry can generate agent-facing workflow bundles with &lt;code>skills-generate&lt;/code>.&lt;/p>
 &lt;p>The current model emphasizes:&lt;/p>
 &lt;ul>
@@ -189,12 +189,12 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>workflow-oriented docs&lt;/li>
 &lt;li>optional prompt guidance&lt;/li>
 &lt;li>direct &lt;code>nocfoundry invoke ...&lt;/code> examples instead of generated runtime wrappers&lt;/li>
-&lt;/ul></description></item><item><title>SSH Source</title><link>https://docs.nocfoundry.dev/dev/resources/sources/ssh/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/resources/sources/ssh/</guid><description>&lt;h1 id="ssh-source">SSH Source&lt;/h1>
-&lt;p>Use the SSH source for CLI-oriented collection and command execution. In NOCFoundry, SSH timeouts are normalized as full operation timeouts per attempt.&lt;/p></description></item><item><title>NETCONF Source</title><link>https://docs.nocfoundry.dev/dev/resources/sources/netconf/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/resources/sources/netconf/</guid><description>&lt;h1 id="netconf-source">NETCONF Source&lt;/h1>
-&lt;p>Use the NETCONF source for structured operational retrieval and config reads, with operation-scoped timeout behavior and retry-aware collection.&lt;/p></description></item><item><title>gNMI Source</title><link>https://docs.nocfoundry.dev/dev/resources/sources/gnmi/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/resources/sources/gnmi/</guid><description>&lt;h1 id="gnmi-source">gNMI Source&lt;/h1>
-&lt;p>Use the gNMI source for structured operational state retrieval with source-level timeout control and audience-safe tool workflows.&lt;/p></description></item><item><title>HTTP Source</title><link>https://docs.nocfoundry.dev/dev/resources/sources/http/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/resources/sources/http/</guid><description>&lt;h1 id="http-source">HTTP Source&lt;/h1>
-&lt;p>Use the HTTP source for adjacent operational systems and service APIs that need to participate in workflows alongside device-facing tools.&lt;/p></description></item><item><title>Nokia Validate</title><link>https://docs.nocfoundry.dev/dev/resources/tools/nokia-validate/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/resources/tools/nokia-validate/</guid><description>&lt;h1 id="nokia-validate">&lt;code>nokia-validate&lt;/code>&lt;/h1>
-&lt;p>&lt;code>nokia-validate&lt;/code> is a read-only validation tool for Nokia devices and blast-radius checks. It collects evidence from one or more devices, evaluates configured assertions, and returns structured pass/fail results for a selected phase such as &lt;code>pre&lt;/code>, &lt;code>during&lt;/code>, or &lt;code>post&lt;/code>.&lt;/p>
+&lt;/ul></description></item><item><title>SSH Source</title><link>https://docs.nocfoundry.com/dev/resources/sources/ssh/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/sources/ssh/</guid><description>&lt;h1 id="ssh-source">SSH Source&lt;/h1>
+&lt;p>Use the SSH source for CLI-oriented collection and command execution. In NOCFoundry, SSH timeouts are normalized as full operation timeouts per attempt.&lt;/p></description></item><item><title>NETCONF Source</title><link>https://docs.nocfoundry.com/dev/resources/sources/netconf/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/sources/netconf/</guid><description>&lt;h1 id="netconf-source">NETCONF Source&lt;/h1>
+&lt;p>Use the NETCONF source for structured operational retrieval and config reads, with operation-scoped timeout behavior and retry-aware collection.&lt;/p></description></item><item><title>gNMI Source</title><link>https://docs.nocfoundry.com/dev/resources/sources/gnmi/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/sources/gnmi/</guid><description>&lt;h1 id="gnmi-source">gNMI Source&lt;/h1>
+&lt;p>Use the gNMI source for structured operational state retrieval with source-level timeout control and audience-safe tool workflows.&lt;/p></description></item><item><title>HTTP Source</title><link>https://docs.nocfoundry.com/dev/resources/sources/http/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/sources/http/</guid><description>&lt;h1 id="http-source">HTTP Source&lt;/h1>
+&lt;p>Use the HTTP source for adjacent operational systems and service APIs that need to participate in workflows alongside device-facing tools.&lt;/p></description></item><item><title>Validate</title><link>https://docs.nocfoundry.com/dev/resources/tools/validate/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/tools/validate/</guid><description>&lt;h1 id="validate">&lt;code>validate&lt;/code>&lt;/h1>
+&lt;p>&lt;code>validate&lt;/code> is a read-only validation tool for network devices and blast-radius checks. It collects evidence from one or more devices, evaluates configured assertions, and returns structured pass/fail results for a selected phase such as &lt;code>pre&lt;/code>, &lt;code>during&lt;/code>, or &lt;code>post&lt;/code>.&lt;/p>
 &lt;p>This tool is intentionally not a change engine. Agents and operators should use it as a deterministic validation primitive inside a larger maintenance workflow.&lt;/p>
 &lt;h2 id="what-it-is-good-for">What it is good for&lt;/h2>
 &lt;ul>
@@ -226,7 +226,7 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;h2 id="example-configuration">Example configuration&lt;/h2>
 &lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">kind&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">tools&lt;/span>&lt;span class="w">
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">maintenance_validation&lt;/span>&lt;span class="w">
-&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">nokia-validate&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">validate&lt;/span>&lt;span class="w">
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">authRequired&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">noc-keycloak&lt;/span>&lt;span class="w">
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">sourceSelector&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
@@ -249,8 +249,8 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="related-examples">Related examples&lt;/h2>
 &lt;ul>
 &lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/keycloak-protected-validation.yaml">&lt;code>examples/tools-configs/keycloak-protected-validation.yaml&lt;/code>&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://docs.nocfoundry.dev/dev/workflows/validation-runs/">Validation runs&lt;/a>&lt;/li>
-&lt;/ul></description></item><item><title>CLI Reference</title><link>https://docs.nocfoundry.dev/dev/reference/cli/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/reference/cli/</guid><description>&lt;h1 id="cli-reference">CLI Reference&lt;/h1>
+&lt;li>&lt;a href="https://docs.nocfoundry.com/dev/workflows/validation-runs/">Validation runs&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>CLI Reference</title><link>https://docs.nocfoundry.com/dev/reference/cli/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/reference/cli/</guid><description>&lt;h1 id="cli-reference">CLI Reference&lt;/h1>
 &lt;p>The root command is:&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">nocfoundry
 &lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Core entry points include:&lt;/p>
@@ -269,13 +269,13 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./nocfoundry --prebuilt validation-runs
 &lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>--prebuilt&lt;/code> is not a boolean flag, and it does not take an individual tool name. This is invalid:&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./nocfoundry --prebuilt start_validation_run
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>because &lt;code>start_validation_run&lt;/code> is a tool inside the &lt;code>validation-runs&lt;/code> catalog, not the catalog name itself.&lt;/p></description></item><item><title>FAQ</title><link>https://docs.nocfoundry.dev/dev/reference/faq/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/reference/faq/</guid><description>&lt;h1 id="faq">FAQ&lt;/h1>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>because &lt;code>start_validation_run&lt;/code> is a tool inside the &lt;code>validation-runs&lt;/code> catalog, not the catalog name itself.&lt;/p></description></item><item><title>FAQ</title><link>https://docs.nocfoundry.com/dev/reference/faq/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/reference/faq/</guid><description>&lt;h1 id="faq">FAQ&lt;/h1>
 &lt;h2 id="does-nocfoundry-execute-prompts-itself">Does NOCFoundry execute prompts itself?&lt;/h2>
 &lt;p>No. Prompt resources are exposed for clients and agents to consume. NOCFoundry does not execute prompts against an LLM.&lt;/p>
 &lt;h2 id="why-is-api-returning-401">Why is &lt;code>/api&lt;/code> returning 401?&lt;/h2>
 &lt;p>If endpoint auth is enabled, callers must present a bearer token that matches the configured &lt;code>/api&lt;/code> audience.&lt;/p>
 &lt;h2 id="does-the-ui-require-login">Does the UI require login?&lt;/h2>
-&lt;p>The UI shell can remain public while its backing &lt;code>/api&lt;/code> calls are protected. When UI auth is enabled, the browser signs in through OIDC + PKCE.&lt;/p></description></item><item><title>Local Lab with Keycloak</title><link>https://docs.nocfoundry.dev/dev/examples/local-lab-with-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/examples/local-lab-with-keycloak/</guid><description>&lt;h1 id="local-lab-with-keycloak">Local Lab with Keycloak&lt;/h1>
+&lt;p>The UI shell can remain public while its backing &lt;code>/api&lt;/code> calls are protected. When UI auth is enabled, the browser signs in through OIDC + PKCE.&lt;/p></description></item><item><title>Local Lab with Keycloak</title><link>https://docs.nocfoundry.com/dev/examples/local-lab-with-keycloak/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/examples/local-lab-with-keycloak/</guid><description>&lt;h1 id="local-lab-with-keycloak">Local Lab with Keycloak&lt;/h1>
 &lt;p>Use this protected local lab stack when you want to test:&lt;/p>
 &lt;ul>
 &lt;li>Keycloak-backed OIDC auth services&lt;/li>
@@ -301,7 +301,7 @@ pair this protected stack with the SR Linux containerlab fabric.&lt;/p>
 &lt;li>destroy it with &lt;code>sudo containerlab destroy -t examples/containerlab/noc-foundry-lab.clab.yaml&lt;/code>&lt;/li>
 &lt;/ul>
 &lt;h2 id="start-keycloak">Start Keycloak&lt;/h2>
-&lt;p>Start the local Keycloak example:&lt;/p></description></item><item><title>Containerlab SR Linux Lab</title><link>https://docs.nocfoundry.dev/dev/examples/containerlab-srlinux-lab/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/examples/containerlab-srlinux-lab/</guid><description>&lt;h1 id="containerlab-sr-linux-lab">Containerlab SR Linux Lab&lt;/h1>
+&lt;p>Start the local Keycloak example:&lt;/p></description></item><item><title>Containerlab SR Linux Lab</title><link>https://docs.nocfoundry.com/dev/examples/containerlab-srlinux-lab/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/examples/containerlab-srlinux-lab/</guid><description>&lt;h1 id="containerlab-sr-linux-lab">Containerlab SR Linux Lab&lt;/h1>
 &lt;p>Use this example when you want a realistic local network topology for NOCFoundry
 development and validation testing.&lt;/p>
 &lt;p>Main files:&lt;/p>

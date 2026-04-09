@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Workflows on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/workflows/</link><description>Recent content in Workflows on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/workflows/index.xml" rel="self" type="application/rss+xml"/><item><title>Validation Runs</title><link>https://docs.nocfoundry.dev/dev/workflows/validation-runs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/workflows/validation-runs/</guid><description>&lt;h1 id="validation-runs">Validation Runs&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Workflows on NOCFoundry Docs</title><link>https://docs.nocfoundry.com/dev/workflows/</link><description>Recent content in Workflows on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.com/dev/workflows/index.xml" rel="self" type="application/rss+xml"/><item><title>Validation Runs</title><link>https://docs.nocfoundry.com/dev/workflows/validation-runs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/workflows/validation-runs/</guid><description>&lt;h1 id="validation-runs">Validation Runs&lt;/h1>
 &lt;p>Validation runs provide a long-running execution model for multi-step network validation workflows.&lt;/p>
 &lt;p>Typical lifecycle:&lt;/p>
 &lt;ol>
@@ -13,7 +13,7 @@
 &lt;li>&lt;code>validation_run_status&lt;/code>&lt;/li>
 &lt;li>&lt;code>validation_run_result&lt;/code>&lt;/li>
 &lt;li>&lt;code>cancel_validation_run&lt;/code>&lt;/li>
-&lt;/ul></description></item><item><title>Skills</title><link>https://docs.nocfoundry.dev/dev/workflows/skills/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/workflows/skills/</guid><description>&lt;h1 id="skills">Skills&lt;/h1>
+&lt;/ul></description></item><item><title>Skills</title><link>https://docs.nocfoundry.com/dev/workflows/skills/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/workflows/skills/</guid><description>&lt;h1 id="skills">Skills&lt;/h1>
 &lt;p>NOCFoundry can generate agent-facing workflow bundles with &lt;code>skills-generate&lt;/code>.&lt;/p>
 &lt;p>The current model emphasizes:&lt;/p>
 &lt;ul>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration on NOCFoundry Docs</title><link>https://docs.nocfoundry.dev/dev/configuration/</link><description>Recent content in Configuration on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.dev/dev/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Tool Catalogs</title><link>https://docs.nocfoundry.dev/dev/configuration/tool-catalogs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/tool-catalogs/</guid><description>&lt;h1 id="tool-catalogs">Tool Catalogs&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Configuration on NOCFoundry Docs</title><link>https://docs.nocfoundry.com/dev/configuration/</link><description>Recent content in Configuration on NOCFoundry Docs</description><generator>Hugo</generator><language>en</language><atom:link href="https://docs.nocfoundry.com/dev/configuration/index.xml" rel="self" type="application/rss+xml"/><item><title>Tool Catalogs</title><link>https://docs.nocfoundry.com/dev/configuration/tool-catalogs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/tool-catalogs/</guid><description>&lt;h1 id="tool-catalogs">Tool Catalogs&lt;/h1>
 &lt;p>Tool catalogs define the operational resources NOCFoundry loads at startup.&lt;/p>
 &lt;h2 id="supported-catalog-flags">Supported catalog flags&lt;/h2>
 &lt;ul>
@@ -25,7 +25,7 @@
 &lt;li>embedding models&lt;/li>
 &lt;/ul>
 &lt;h2 id="prebuilt-catalogs">Prebuilt catalogs&lt;/h2>
-&lt;p>&lt;code>--prebuilt&lt;/code> takes a bundled catalog name, not an individual tool name.&lt;/p></description></item><item><title>Server Config</title><link>https://docs.nocfoundry.dev/dev/configuration/server-config/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/server-config/</guid><description>&lt;h1 id="server-config">Server Config&lt;/h1>
+&lt;p>&lt;code>--prebuilt&lt;/code> takes a bundled catalog name, not an individual tool name.&lt;/p></description></item><item><title>Server Config</title><link>https://docs.nocfoundry.com/dev/configuration/server-config/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/server-config/</guid><description>&lt;h1 id="server-config">Server Config&lt;/h1>
 &lt;p>&lt;code>--server-config&lt;/code> carries server-wide runtime policy that should not be owned by individual tool catalog files.&lt;/p>
 &lt;h2 id="current-focus">Current focus&lt;/h2>
 &lt;p>Today, the most important server config capabilities are:&lt;/p>
@@ -63,7 +63,7 @@
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --server-config examples/server-configs/protected-api-mcp-ui.yaml &lt;span class="se">\
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --validation-config examples/validation-runtime-configs/durable-validation-sqlite.yaml &lt;span class="se">\
 &lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> --ui
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Validation Runtime</title><link>https://docs.nocfoundry.dev/dev/configuration/validation-runtime/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.dev/dev/configuration/validation-runtime/</guid><description>&lt;h1 id="validation-runtime">Validation Runtime&lt;/h1>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Validation Runtime</title><link>https://docs.nocfoundry.com/dev/configuration/validation-runtime/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/validation-runtime/</guid><description>&lt;h1 id="validation-runtime">Validation Runtime&lt;/h1>
 &lt;p>&lt;code>--validation-config&lt;/code> controls how validation runs are executed and stored.&lt;/p>
 &lt;h2 id="key-runtime-settings">Key runtime settings&lt;/h2>
 &lt;ul>
