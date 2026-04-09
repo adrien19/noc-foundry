@@ -9,7 +9,7 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
-          "type": "plain",
+          "type": "generic",
           "path": "cmd/version.txt"
         },
         {

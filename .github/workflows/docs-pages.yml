@@ -10,9 +10,6 @@ on:
       - ".webdocs/**"
       - ".github/workflows/docs-pages.yml"
   pull_request:
-    paths:
-      - ".webdocs/**"
-      - ".github/workflows/docs-pages.yml"
   workflow_dispatch:
 
 permissions:
