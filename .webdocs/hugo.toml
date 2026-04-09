@@ -1,4 +1,5 @@
 title = "NOCFoundry Docs"
+# baseURL is overridden by build-versioned-site.sh at build time
 baseURL = "https://docs.nocfoundry.com/dev/"
 languageCode = "en-us"
 defaultContentLanguage = "en"
