@@ -14,6 +14,7 @@ Short-lived branches:
 - `feat/*`
 - `fix/*`
 - `chore/*`
+- `refact/*`
 
 ## Pull Request Requirements
 

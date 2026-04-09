@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nokiavalidate_test
+package validate_test
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/testutils"
 	"github.com/adrien19/noc-foundry/internal/tools"
-	nokia "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiavalidate"
+	validate "github.com/adrien19/noc-foundry/internal/tools/common/validate"
 	"github.com/adrien19/noc-foundry/internal/util/parameters"
 	"github.com/adrien19/noc-foundry/internal/validation"
 	"github.com/google/go-cmp/cmp"
@@ -37,7 +37,7 @@ func TestParseFromYamlNokiaValidate(t *testing.T) {
 	in := `
 kind: tools
 name: validate_upgrade
-type: nokia-validate
+type: validate
 source: my-nokia
 phases:
   - name: pre
@@ -54,27 +54,27 @@ phases:
 `
 
 	want := server.ToolConfigs{
-		"validate_upgrade": nokia.Config{
+		"validate_upgrade": validate.Config{
 			Name:         "validate_upgrade",
-			Type:         "nokia-validate",
+			Type:         "validate",
 			Source:       "my-nokia",
 			AuthRequired: []string{},
-			Phases: []nokia.Phase{
+			Phases: []validate.Phase{
 				{
 					Name: "pre",
-					Steps: []nokia.Step{
+					Steps: []validate.Step{
 						{
 							Name: "collect_version",
-							Collect: &nokia.CollectSpec{
+							Collect: &validate.CollectSpec{
 								Into:      "version",
 								Operation: "get_system_version",
 							},
 						},
 						{
 							Name: "assert_version",
-							Assert: &nokia.AssertSpec{
+							Assert: &validate.AssertSpec{
 								From:  []string{"version"},
-								Scope: nokia.ScopePerRecord,
+								Scope: validate.ScopePerRecord,
 								Expr:  `.payload.software_version == "v24.3.2"`,
 							},
 						},
@@ -97,7 +97,7 @@ func TestParseFromYamlNokiaValidateUseProfile(t *testing.T) {
 	in := `
 kind: tools
 name: validate_profile
-type: nokia-validate
+type: validate
 source: my-nokia
 useProfile: base
 profiles:
@@ -121,14 +121,14 @@ profiles:
 }
 
 func TestInitializeValidationErrors(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name: "validate",
-		Type: "nokia-validate",
-		Phases: []nokia.Phase{{
+		Type: "validate",
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{{
+			Steps: []validate.Step{{
 				Name: "bad",
-				Collect: &nokia.CollectSpec{
+				Collect: &validate.CollectSpec{
 					Into: "version",
 				},
 			}},
@@ -235,26 +235,26 @@ func TestInvokeSingleSourceOperationPass(t *testing.T) {
 		},
 	}
 
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
+			Steps: []validate.Step{
 				{
 					Name: "collect_version",
-					Collect: &nokia.CollectSpec{
+					Collect: &validate.CollectSpec{
 						Into:      "version",
 						Operation: "get_system_version",
 					},
 				},
 				{
 					Name: "assert_version",
-					Assert: &nokia.AssertSpec{
+					Assert: &validate.AssertSpec{
 						Name:  "expected_version",
 						From:  []string{"version"},
-						Scope: nokia.ScopePerRecord,
+						Scope: validate.ScopePerRecord,
 						Expr:  `.payload.software_version == "v24.3.2"`,
 					},
 				},
@@ -274,9 +274,9 @@ func TestInvokeSingleSourceOperationPass(t *testing.T) {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
 
-	got := result.(nokia.Result)
-	if got.Status != nokia.StatusPass {
-		t.Fatalf("status = %q, want %q", got.Status, nokia.StatusPass)
+	got := result.(validate.Result)
+	if got.Status != validate.StatusPass {
+		t.Fatalf("status = %q, want %q", got.Status, validate.StatusPass)
 	}
 	if got.Phase != "pre" {
 		t.Fatalf("phase = %q, want %q", got.Phase, "pre")
@@ -298,18 +298,18 @@ func TestInvokeSelectorAggregatePartial(t *testing.T) {
 		},
 	}
 
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name: "validate_alarms",
-		Type: "nokia-validate",
-		SourceSelector: &nokia.SourceSelector{
+		Type: "validate",
+		SourceSelector: &validate.SourceSelector{
 			MatchLabels: map[string]string{"service": "bng"},
 		},
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
+			Steps: []validate.Step{
 				{
 					Name: "collect_alarms",
-					Collect: &nokia.CollectSpec{
+					Collect: &validate.CollectSpec{
 						Into:    "alarms",
 						Command: "show system alarms | as json",
 						Transforms: map[string]query.TransformSpec{
@@ -319,9 +319,9 @@ func TestInvokeSelectorAggregatePartial(t *testing.T) {
 				},
 				{
 					Name: "assert_no_alarms",
-					Assert: &nokia.AssertSpec{
+					Assert: &validate.AssertSpec{
 						From:  []string{"alarms"},
-						Scope: nokia.ScopeAggregate,
+						Scope: validate.ScopeAggregate,
 						Expr:  `([.records[] | select(.error == null and ((.payload.active_alarms // []) | length > 0))] | length) == 0`,
 					},
 				},
@@ -354,26 +354,26 @@ func TestInvokeSelectorAggregatePartial(t *testing.T) {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
 
-	got := result.(nokia.Result)
-	if got.Status != nokia.StatusFail {
-		t.Fatalf("status = %q, want %q", got.Status, nokia.StatusFail)
+	got := result.(validate.Result)
+	if got.Status != validate.StatusFail {
+		t.Fatalf("status = %q, want %q", got.Status, validate.StatusFail)
 	}
-	if got.Steps[0].Status != nokia.StatusPartial {
-		t.Fatalf("collect step status = %q, want %q", got.Steps[0].Status, nokia.StatusPartial)
+	if got.Steps[0].Status != validate.StatusPartial {
+		t.Fatalf("collect step status = %q, want %q", got.Steps[0].Status, validate.StatusPartial)
 	}
-	if got.Steps[1].Status != nokia.StatusPass {
-		t.Fatalf("assert step status = %q, want %q", got.Steps[1].Status, nokia.StatusPass)
+	if got.Steps[1].Status != validate.StatusPass {
+		t.Fatalf("assert step status = %q, want %q", got.Steps[1].Status, validate.StatusPass)
 	}
 }
 
 func TestInvokeRequiresPhaseParam(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{
-			{Name: "pre", Steps: []nokia.Step{{Name: "collect", Collect: &nokia.CollectSpec{Into: "x", Command: "show version"}}}},
-			{Name: "post", Steps: []nokia.Step{{Name: "collect", Collect: &nokia.CollectSpec{Into: "x", Command: "show version"}}}},
+		Phases: []validate.Phase{
+			{Name: "pre", Steps: []validate.Step{{Name: "collect", Collect: &validate.CollectSpec{Into: "x", Command: "show version"}}}},
+			{Name: "post", Steps: []validate.Step{{Name: "collect", Collect: &validate.CollectSpec{Into: "x", Command: "show version"}}}},
 		},
 	}
 	tool, err := cfg.Initialize(nil)
@@ -404,18 +404,18 @@ func TestSelectorDeviceNarrowingAndDedup(t *testing.T) {
 		},
 	}
 
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name: "validate",
-		Type: "nokia-validate",
-		SourceSelector: &nokia.SourceSelector{
+		Type: "validate",
+		SourceSelector: &validate.SourceSelector{
 			MatchLabels: map[string]string{"role": "edge"},
 		},
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
+			Steps: []validate.Step{
 				{
 					Name: "collect_version",
-					Collect: &nokia.CollectSpec{
+					Collect: &validate.CollectSpec{
 						Into:      "version",
 						Operation: "get_system_version",
 					},
@@ -454,7 +454,7 @@ func TestSelectorDeviceNarrowingAndDedup(t *testing.T) {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
 
-	got := result.(nokia.Result)
+	got := result.(validate.Result)
 	if len(got.Evidence) != 1 || len(got.Evidence[0].Records) != 1 {
 		t.Fatalf("unexpected evidence: %+v", got.Evidence)
 	}
@@ -469,22 +469,22 @@ func TestPrimitiveAssertionCountGTE(t *testing.T) {
 			"show interface | as json": `[{"name":"ethernet-1/1","oper-status":"UP"},{"name":"ethernet-1/2","oper-status":"UP"},{"name":"ethernet-1/3","oper-status":"UP"}]`,
 		},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_interfaces",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
-				{Name: "collect", Collect: &nokia.CollectSpec{
+			Steps: []validate.Step{
+				{Name: "collect", Collect: &validate.CollectSpec{
 					Into: "interfaces", Command: "show interface | as json",
 					Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
 				}},
-				{Name: "assert", Assert: &nokia.AssertSpec{
+				{Name: "assert", Assert: &validate.AssertSpec{
 					From:  []string{"interfaces"},
-					Scope: nokia.ScopePerRecord,
-					Primitive: &nokia.AssertionCheck{
-						Type:   nokia.AssertionCountGTE,
+					Scope: validate.ScopePerRecord,
+					Primitive: &validate.AssertionCheck{
+						Type:   validate.AssertionCountGTE,
 						Path:   "payload",
 						Filter: `.["oper-status"] == "UP"`,
 						Count:  ptrInt(3),
@@ -501,8 +501,8 @@ func TestPrimitiveAssertionCountGTE(t *testing.T) {
 	if toolErr != nil {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
-	got := result.(nokia.Result)
-	if got.Status != nokia.StatusPass {
+	got := result.(validate.Result)
+	if got.Status != validate.StatusPass {
 		t.Fatalf("status = %q, want pass", got.Status)
 	}
 }
@@ -513,21 +513,21 @@ func TestWarningSeverityProducesPartialOutcome(t *testing.T) {
 			"show version | as json": `{"host-name":"leaf1","software-version":"v24.3.2"}`,
 		},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_warning",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
-				{Name: "collect", Collect: &nokia.CollectSpec{
+			Steps: []validate.Step{
+				{Name: "collect", Collect: &validate.CollectSpec{
 					Into: "version", Command: "show version | as json",
 					Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
 				}},
-				{Name: "assert", Assert: &nokia.AssertSpec{
+				{Name: "assert", Assert: &validate.AssertSpec{
 					From:     []string{"version"},
-					Scope:    nokia.ScopePerRecord,
-					Severity: nokia.SeverityWarning,
+					Scope:    validate.ScopePerRecord,
+					Severity: validate.SeverityWarning,
 					Expr:     `.payload."software-version" == "bad"`,
 					Message:  "review software version drift",
 				}},
@@ -542,21 +542,21 @@ func TestWarningSeverityProducesPartialOutcome(t *testing.T) {
 	if toolErr != nil {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
-	got := result.(nokia.Result)
-	if got.Status != nokia.StatusPartial || got.Outcome != nokia.OutcomeWarning || got.Blocking {
+	got := result.(validate.Result)
+	if got.Status != validate.StatusPartial || got.Outcome != validate.OutcomeWarning || got.Blocking {
 		t.Fatalf("unexpected result: %+v", got)
 	}
 }
 
 func TestUseProfileAndTemplateExpansion(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:       "validate_profile",
-		Type:       "nokia-validate",
+		Type:       "validate",
 		Source:     "lab/leaf1/ssh",
 		UseProfile: "base",
-		Profiles: map[string]nokia.ValidationProfile{
+		Profiles: map[string]validate.ValidationProfile{
 			"base": {
-				Phases: []nokia.PhaseTemplate{{Name: "pre", Steps: []nokia.StepTemplate{{Name: "collect_version", Collect: &nokia.CollectSpec{Into: "version", Command: "show version"}}}}},
+				Phases: []validate.PhaseTemplate{{Name: "pre", Steps: []validate.StepTemplate{{Name: "collect_version", Collect: &validate.CollectSpec{Into: "version", Command: "show version"}}}}},
 			},
 		},
 	}
@@ -564,7 +564,7 @@ func TestUseProfileAndTemplateExpansion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("initialize failed: %v", err)
 	}
-	if tool.ToConfig().(nokia.Config).Phases[0].Steps[0].Name != "collect_version" {
+	if tool.ToConfig().(validate.Config).Phases[0].Steps[0].Name != "collect_version" {
 		t.Fatalf("template expansion did not materialize phase steps")
 	}
 }
@@ -573,16 +573,16 @@ func TestTransportRequireWithoutFallbackProducesPartialCollection(t *testing.T) 
 	src := &mockSource{
 		outputs: map[string]string{"show version | as json": `{"software-version":"v24.3.2"}`},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:           "validate_transport",
-		Type:           "nokia-validate",
-		SourceSelector: &nokia.SourceSelector{MatchLabels: map[string]string{"role": "edge"}},
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{{
+		Type:           "validate",
+		SourceSelector: &validate.SourceSelector{MatchLabels: map[string]string{"role": "edge"}},
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{{
 			Name: "collect",
-			Collect: &nokia.CollectSpec{
+			Collect: &validate.CollectSpec{
 				Into: "version", Command: "show version | as json",
 				Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
-				Transport:  &nokia.TransportPolicy{Prefer: []string{"gnmi"}, Require: []string{"gnmi"}, Fallback: false},
+				Transport:  &validate.TransportPolicy{Prefer: []string{"gnmi"}, Require: []string{"gnmi"}, Fallback: false},
 			},
 		}}}},
 	}
@@ -599,8 +599,8 @@ func TestTransportRequireWithoutFallbackProducesPartialCollection(t *testing.T) 
 	if toolErr != nil {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
-	got := result.(nokia.Result)
-	if got.Status != nokia.StatusFail || got.Evidence[0].Summary.Failed == 0 {
+	got := result.(validate.Result)
+	if got.Status != validate.StatusFail || got.Evidence[0].Summary.Failed == 0 {
 		t.Fatalf("unexpected result: %+v", got)
 	}
 }
@@ -610,19 +610,19 @@ func TestConvergeAssertionPassesAfterRetry(t *testing.T) {
 		outputs:  map[string]string{"show version | as json": `{"software-version":"v24.3.2"}`},
 		runCount: map[string]int{},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_converge",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{
-			{Name: "collect", Collect: &nokia.CollectSpec{
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{
+			{Name: "collect", Collect: &validate.CollectSpec{
 				Into: "version", Command: "show version | as json",
 				Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
 			}},
-			{Name: "assert", Assert: &nokia.AssertSpec{
-				From: []string{"version"}, Scope: nokia.ScopePerRecord,
+			{Name: "assert", Assert: &validate.AssertSpec{
+				From: []string{"version"}, Scope: validate.ScopePerRecord,
 				Expr: `.payload."software-version" == "v24.3.2"`,
-			}, Converge: &nokia.ConvergePolicy{Until: nokia.ConvergeAssertionPass, Interval: "1ms", MaxAttempts: 2}},
+			}, Converge: &validate.ConvergePolicy{Until: validate.ConvergeAssertionPass, Interval: "1ms", MaxAttempts: 2}},
 		}}},
 	}
 	tool, err := cfg.Initialize(map[string]sources.Source{"lab/leaf1/ssh": src})
@@ -633,7 +633,7 @@ func TestConvergeAssertionPassesAfterRetry(t *testing.T) {
 	if toolErr != nil {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
-	got := result.(nokia.Result)
+	got := result.(validate.Result)
 	if got.Steps[1].Convergence == nil || !got.Steps[1].Convergence.Met {
 		t.Fatalf("expected convergence metadata, got %+v", got.Steps[1])
 	}
@@ -643,26 +643,26 @@ func TestExecuteCompiledStepReturnsSingleConvergenceObservation(t *testing.T) {
 	src := &mockSource{
 		outputs: map[string]string{"show version | as json": `{"software-version":"v24.3.2"}`},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_converge_step",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{
-			{Name: "collect", Collect: &nokia.CollectSpec{
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{
+			{Name: "collect", Collect: &validate.CollectSpec{
 				Into: "version", Command: "show version | as json",
 				Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
 			}},
-			{Name: "assert", Assert: &nokia.AssertSpec{
-				From: []string{"version"}, Scope: nokia.ScopePerRecord,
+			{Name: "assert", Assert: &validate.AssertSpec{
+				From: []string{"version"}, Scope: validate.ScopePerRecord,
 				Expr: `.payload."software-version" == "v24.3.2"`,
-			}, Converge: &nokia.ConvergePolicy{Until: nokia.ConvergeAssertionPass, Interval: "1ms", MaxAttempts: 2, MinPasses: 2}},
+			}, Converge: &validate.ConvergePolicy{Until: validate.ConvergeAssertionPass, Interval: "1ms", MaxAttempts: 2, MinPasses: 2}},
 		}}},
 	}
 	toolAny, err := cfg.Initialize(map[string]sources.Source{"lab/leaf1/ssh": src})
 	if err != nil {
 		t.Fatalf("initialize failed: %v", err)
 	}
-	tool := toolAny.(nokia.Tool)
+	tool := toolAny.(validate.Tool)
 	provider := &mockSourceProvider{sources: map[string]sources.Source{"lab/leaf1/ssh": src}}
 	compiled, err := tool.CompileValidationRun(context.Background(), provider, nil)
 	if err != nil {
@@ -672,7 +672,7 @@ func TestExecuteCompiledStepReturnsSingleConvergenceObservation(t *testing.T) {
 		Phase: "pre",
 		Index: 0,
 		Name:  "collect",
-		Kind:  string(nokia.StepKindCollect),
+		Kind:  string(validate.StepKindCollect),
 	}, validation.StepExecutionInput{Attempt: 1}, "")
 	if toolErr != nil {
 		t.Fatalf("collect step failed: %v", toolErr)
@@ -681,7 +681,7 @@ func TestExecuteCompiledStepReturnsSingleConvergenceObservation(t *testing.T) {
 		Phase: "pre",
 		Index: 1,
 		Name:  "assert",
-		Kind:  string(nokia.StepKindAssert),
+		Kind:  string(validate.StepKindAssert),
 	}, validation.StepExecutionInput{
 		Attempt:  1,
 		Evidence: collectOutput.EvidenceDelta,
@@ -704,15 +704,15 @@ func TestExecuteCompiledCollectStepRetriesTransientFailure(t *testing.T) {
 			{output: `{"software-version":"v24.3.2"}`},
 		},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_collect_retry",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{{
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{{
 			Name: "collect",
-			Collect: &nokia.CollectSpec{
+			Collect: &validate.CollectSpec{
 				Into: "version", Command: "show version | as json",
-				Retry: &nokia.RetryPolicy{
+				Retry: &validate.RetryPolicy{
 					Interval:    "1ms",
 					MaxAttempts: 2,
 				},
@@ -724,7 +724,7 @@ func TestExecuteCompiledCollectStepRetriesTransientFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("initialize failed: %v", err)
 	}
-	tool := toolAny.(nokia.Tool)
+	tool := toolAny.(validate.Tool)
 	provider := &mockSourceProvider{sources: map[string]sources.Source{"lab/leaf1/ssh": src}}
 	compiled, err := tool.CompileValidationRun(context.Background(), provider, nil)
 	if err != nil {
@@ -732,7 +732,7 @@ func TestExecuteCompiledCollectStepRetriesTransientFailure(t *testing.T) {
 	}
 
 	first, toolErr := tool.ExecuteCompiledStep(context.Background(), provider, compiled, validation.StepRef{
-		Phase: "pre", Index: 0, Name: "collect", Kind: string(nokia.StepKindCollect),
+		Phase: "pre", Index: 0, Name: "collect", Kind: string(validate.StepKindCollect),
 	}, validation.StepExecutionInput{Attempt: 1}, "")
 	if toolErr != nil {
 		t.Fatalf("first attempt failed unexpectedly: %v", toolErr)
@@ -745,7 +745,7 @@ func TestExecuteCompiledCollectStepRetriesTransientFailure(t *testing.T) {
 	}
 
 	second, toolErr := tool.ExecuteCompiledStep(context.Background(), provider, compiled, validation.StepRef{
-		Phase: "pre", Index: 0, Name: "collect", Kind: string(nokia.StepKindCollect),
+		Phase: "pre", Index: 0, Name: "collect", Kind: string(validate.StepKindCollect),
 	}, validation.StepExecutionInput{Attempt: 2}, "")
 	if toolErr != nil {
 		t.Fatalf("second attempt failed unexpectedly: %v", toolErr)
@@ -760,16 +760,16 @@ func TestExecuteCompiledCollectStepRetriesTransientFailure(t *testing.T) {
 
 func TestCollectRetryValidation(t *testing.T) {
 	t.Run("requires interval for retries", func(t *testing.T) {
-		cfg := nokia.Config{
+		cfg := validate.Config{
 			Name:   "validate_collect_retry",
-			Type:   "nokia-validate",
+			Type:   "validate",
 			Source: "lab/leaf1/ssh",
-			Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{{
+			Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{{
 				Name: "collect",
-				Collect: &nokia.CollectSpec{
+				Collect: &validate.CollectSpec{
 					Into:    "version",
 					Command: "show version | as json",
-					Retry:   &nokia.RetryPolicy{MaxAttempts: 2},
+					Retry:   &validate.RetryPolicy{MaxAttempts: 2},
 				},
 			}}}},
 		}
@@ -779,16 +779,16 @@ func TestCollectRetryValidation(t *testing.T) {
 	})
 
 	t.Run("rejects invalid collect retry timeout", func(t *testing.T) {
-		cfg := nokia.Config{
+		cfg := validate.Config{
 			Name:   "validate_collect_retry",
-			Type:   "nokia-validate",
+			Type:   "validate",
 			Source: "lab/leaf1/ssh",
-			Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{{
+			Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{{
 				Name: "collect",
-				Collect: &nokia.CollectSpec{
+				Collect: &validate.CollectSpec{
 					Into:    "version",
 					Command: "show version | as json",
-					Retry:   &nokia.RetryPolicy{Timeout: "bad"},
+					Retry:   &validate.RetryPolicy{Timeout: "bad"},
 				},
 			}}}},
 		}
@@ -802,13 +802,13 @@ func TestCommandCollectionDefaultsToSSH(t *testing.T) {
 	ssh := &mockSource{
 		outputs: map[string]string{"show version | as json": `{"software-version":"v24.3.2"}`},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:           "validate_command_default",
-		Type:           "nokia-validate",
-		SourceSelector: &nokia.SourceSelector{MatchLabels: map[string]string{"role": "edge"}},
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{{
+		Type:           "validate",
+		SourceSelector: &validate.SourceSelector{MatchLabels: map[string]string{"role": "edge"}},
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{{
 			Name: "collect",
-			Collect: &nokia.CollectSpec{
+			Collect: &validate.CollectSpec{
 				Into: "version", Command: "show version | as json",
 				Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
 			},
@@ -836,7 +836,7 @@ func TestCommandCollectionDefaultsToSSH(t *testing.T) {
 	if toolErr != nil {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
-	got := result.(nokia.Result)
+	got := result.(validate.Result)
 	if got.Evidence[0].Records[0].SourceName != "lab/edge-1/ssh" {
 		t.Fatalf("source name = %q, want ssh", got.Evidence[0].Records[0].SourceName)
 	}
@@ -846,24 +846,24 @@ func TestEvidenceRefFiltersByStoredGroups(t *testing.T) {
 	src := &mockSource{
 		outputs: map[string]string{"show version | as json": `{"software-version":"v24.3.2"}`},
 	}
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:           "validate_groups",
-		Type:           "nokia-validate",
-		SourceSelector: &nokia.SourceSelector{MatchLabels: map[string]string{"role": "edge"}},
-		Groups: map[string]nokia.TargetGroup{
+		Type:           "validate",
+		SourceSelector: &validate.SourceSelector{MatchLabels: map[string]string{"role": "edge"}},
+		Groups: map[string]validate.TargetGroup{
 			"primary": {MatchLabels: map[string]string{"lane": "a"}},
 			"backup":  {MatchLabels: map[string]string{"lane": "b"}},
 		},
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{
-			{Name: "collect", Collect: &nokia.CollectSpec{
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{
+			{Name: "collect", Collect: &validate.CollectSpec{
 				Into: "version", Command: "show version | as json", Targets: []string{"primary"},
 				Transforms: map[string]query.TransformSpec{query.OpRunCommand: {Format: "json"}},
 			}},
-			{Name: "assert", Assert: &nokia.AssertSpec{
-				Inputs: map[string]nokia.EvidenceRef{
+			{Name: "assert", Assert: &validate.AssertSpec{
+				Inputs: map[string]validate.EvidenceRef{
 					"p": {Evidence: "version", Group: "primary", Alias: "primary"},
 				},
-				Scope: nokia.ScopeAggregate,
+				Scope: validate.ScopeAggregate,
 				Expr:  `(.inputs.primary | length) == 1`,
 			}},
 		}}},
@@ -890,27 +890,27 @@ func TestEvidenceRefFiltersByStoredGroups(t *testing.T) {
 	if toolErr != nil {
 		t.Fatalf("invoke failed: %v", toolErr)
 	}
-	got := result.(nokia.Result)
-	if got.Status != nokia.StatusPass {
+	got := result.(validate.Result)
+	if got.Status != validate.StatusPass {
 		t.Fatalf("unexpected result: %+v", got)
 	}
 }
 
 func TestDeltaWithinRequiresReduce(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := validate.Config{
 		Name:   "validate_delta",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{Name: "pre", Steps: []nokia.Step{{
+		Phases: []validate.Phase{{Name: "pre", Steps: []validate.Step{{
 			Name: "assert",
-			Assert: &nokia.AssertSpec{
-				Compare: []nokia.EvidenceComparisonRef{{
-					Left:  nokia.EvidenceRef{Evidence: "a"},
-					Right: nokia.EvidenceRef{Evidence: "b"},
+			Assert: &validate.AssertSpec{
+				Compare: []validate.EvidenceComparisonRef{{
+					Left:  validate.EvidenceRef{Evidence: "a"},
+					Right: validate.EvidenceRef{Evidence: "b"},
 				}},
-				Scope: nokia.ScopeAggregate,
-				Primitive: &nokia.AssertionCheck{
-					Type:      nokia.AssertionDeltaWithin,
+				Scope: validate.ScopeAggregate,
+				Primitive: &validate.AssertionCheck{
+					Type:      validate.AssertionDeltaWithin,
 					Tolerance: ptrFloat(0),
 				},
 			},

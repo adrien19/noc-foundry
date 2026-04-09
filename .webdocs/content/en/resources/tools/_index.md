@@ -8,5 +8,4 @@ description = "Tool reference pages for operator-facing capabilities."
 
 # Tools
 
-Tool docs describe deterministic operational capabilities exposed by NOCFoundry. Start with Nokia validation workflows.
-
+Tool docs describe deterministic operational capabilities exposed by NOCFoundry. Start with validation workflows.

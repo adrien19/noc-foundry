@@ -83,7 +83,7 @@ skipClientIdCheck: true
 ---
 kind: tools
 name: maintenance_validation
-type: nokia-validate
+type: validate
 description: >-
   Durable long-running validation workflow for a protected Nokia maintenance
   window using sqlite-backed run storage and the durabletask backend.

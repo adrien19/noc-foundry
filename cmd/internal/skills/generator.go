@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	toolTypeValidation       = "nokia-validate"
+	toolTypeValidation       = "validate"
 	toolTypeValidationStart  = "validation-run-start"
 	toolTypeValidationStatus = "validation-run-status"
 	toolTypeValidationResult = "validation-run-result"
