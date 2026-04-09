@@ -26,13 +26,13 @@ import (
 	_ "github.com/adrien19/noc-foundry/internal/prompts/custom"
 
 	// Import tool packages for side effect of registration
+	_ "github.com/adrien19/noc-foundry/internal/tools/common/validate"
 	_ "github.com/adrien19/noc-foundry/internal/tools/common/validationruns"
 	_ "github.com/adrien19/noc-foundry/internal/tools/http"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/listdevices"
 	_ "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiashow"
 	_ "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiashowinterfaces"
 	_ "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiashowversion"
-	_ "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiavalidate"
 	_ "github.com/adrien19/noc-foundry/internal/tools/utility/wait"
 
 	// Import source packages for side effect of registration

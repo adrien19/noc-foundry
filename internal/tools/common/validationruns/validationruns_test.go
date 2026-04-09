@@ -24,7 +24,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/tools"
 	common "github.com/adrien19/noc-foundry/internal/tools/common/validationruns"
-	nokia "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiavalidate"
+	validate "github.com/adrien19/noc-foundry/internal/tools/common/validate"
 	"github.com/adrien19/noc-foundry/internal/util/parameters"
 	"github.com/adrien19/noc-foundry/internal/validationruns"
 )
@@ -58,18 +58,18 @@ func TestValidationRunLifecycle(t *testing.T) {
 	defer cancel()
 
 	src := &mockSource{output: `{"host-name":"leaf1","software-version":"v24.3.2"}`}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
-				{Name: "collect", Collect: &nokia.CollectSpec{
+			Steps: []validate.Step{
+				{Name: "collect", Collect: &validate.CollectSpec{
 					Into: "version", Command: "show version | as json",
 				}},
-				{Name: "assert", Assert: &nokia.AssertSpec{
-					From: []string{"version"}, Scope: nokia.ScopePerRecord,
+				{Name: "assert", Assert: &validate.AssertSpec{
+					From: []string{"version"}, Scope: validate.ScopePerRecord,
 					Expr: `.payload."software-version" == "v24.3.2"`,
 				}},
 			},
@@ -174,15 +174,15 @@ func TestValidationRunCancelAndIdempotency(t *testing.T) {
 	defer cancel()
 
 	src := &mockSource{output: `{"host-name":"leaf1","software-version":"v24.3.2"}`, delay: 100 * time.Millisecond}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{{
+			Steps: []validate.Step{{
 				Name: "collect",
-				Collect: &nokia.CollectSpec{
+				Collect: &validate.CollectSpec{
 					Into: "version", Command: "show version | as json",
 				},
 			}},

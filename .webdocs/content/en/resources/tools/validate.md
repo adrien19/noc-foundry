@@ -1,14 +1,14 @@
 +++
-title = "Nokia Validate"
-linkTitle = "Nokia Validate"
+title = "Validate"
+linkTitle = "Validate"
 weight = 61
 type = "docs"
-description = "Read-only, multi-step validation workflows for Nokia devices and blast-radius checks."
+description = "Read-only, multi-step validation workflows for network devices and blast-radius checks."
 +++
 
-# `nokia-validate`
+# `validate`
 
-`nokia-validate` is a read-only validation tool for Nokia devices and blast-radius checks. It collects evidence from one or more devices, evaluates configured assertions, and returns structured pass/fail results for a selected phase such as `pre`, `during`, or `post`.
+`validate` is a read-only validation tool for network devices and blast-radius checks. It collects evidence from one or more devices, evaluates configured assertions, and returns structured pass/fail results for a selected phase such as `pre`, `during`, or `post`.
 
 This tool is intentionally not a change engine. Agents and operators should use it as a deterministic validation primitive inside a larger maintenance workflow.
 
@@ -44,7 +44,7 @@ This tool is intentionally not a change engine. Agents and operators should use 
 ```yaml
 kind: tools
 name: maintenance_validation
-type: nokia-validate
+type: validate
 authRequired:
   - noc-keycloak
 sourceSelector:

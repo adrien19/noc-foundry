@@ -12,7 +12,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/server/resources"
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/tools"
-	nokia "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiavalidate"
+	validate "github.com/adrien19/noc-foundry/internal/tools/common/validate"
 	"github.com/adrien19/noc-foundry/internal/util/parameters"
 	"github.com/adrien19/noc-foundry/internal/validation"
 	"github.com/adrien19/noc-foundry/internal/validationruns"
@@ -88,7 +88,7 @@ func TestSQLiteStoreLifecycle(t *testing.T) {
 		ID:                "run-1",
 		RunType:           "validation",
 		ToolName:          "validate_upgrade",
-		ToolType:          "nokia-validate",
+		ToolType:          "validate",
 		Status:            validationruns.StatusAccepted,
 		ResourceVersion:   1,
 		ConfigFingerprint: "cfg",
@@ -172,18 +172,18 @@ func TestDurableTaskManagerLifecycle(t *testing.T) {
 	defer cancel()
 
 	src := &testSource{output: `{"host-name":"leaf1","software-version":"v24.3.2"}`}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
-				{Name: "collect", Collect: &nokia.CollectSpec{
+			Steps: []validate.Step{
+				{Name: "collect", Collect: &validate.CollectSpec{
 					Into: "version", Command: "show version | as json",
 				}},
-				{Name: "assert", Assert: &nokia.AssertSpec{
-					From: []string{"version"}, Scope: nokia.ScopePerRecord,
+				{Name: "assert", Assert: &validate.AssertSpec{
+					From: []string{"version"}, Scope: validate.ScopePerRecord,
 					Expr: `.payload."software-version" == "v24.3.2"`,
 				}},
 			},
@@ -265,18 +265,18 @@ func TestFreezeOnSubmitSurvivesToolRemoval(t *testing.T) {
 	defer cancel()
 
 	src := &testSource{output: `{"host-name":"leaf1","software-version":"v24.3.2"}`}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
-				{Name: "collect", Collect: &nokia.CollectSpec{
+			Steps: []validate.Step{
+				{Name: "collect", Collect: &validate.CollectSpec{
 					Into: "version", Command: "show version | as json",
 				}},
-				{Name: "assert", Assert: &nokia.AssertSpec{
-					From: []string{"version"}, Scope: nokia.ScopePerRecord,
+				{Name: "assert", Assert: &validate.AssertSpec{
+					From: []string{"version"}, Scope: validate.ScopePerRecord,
 					Expr: `.payload."software-version" == "v24.3.2"`,
 				}},
 			},
@@ -364,22 +364,22 @@ func TestFailedCollectionProducesFailedRun(t *testing.T) {
 	defer cancel()
 
 	src := &testSource{err: fmt.Errorf("device unreachable")}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
+			Steps: []validate.Step{
 				{
 					Name: "collect",
-					Collect: &nokia.CollectSpec{
+					Collect: &validate.CollectSpec{
 						Into: "version", Command: "show version | as json",
 					},
 				},
 				{
 					Name: "collect_next",
-					Collect: &nokia.CollectSpec{
+					Collect: &validate.CollectSpec{
 						Into: "version_next", Command: "show system information | as json",
 					},
 				},
@@ -485,15 +485,15 @@ func TestDurableShutdownCancelsInFlightActivity(t *testing.T) {
 
 	wait := make(chan struct{})
 	src := &testSource{wait: wait}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{{
+			Steps: []validate.Step{{
 				Name: "collect",
-				Collect: &nokia.CollectSpec{
+				Collect: &validate.CollectSpec{
 					Into: "version", Command: "show version | as json",
 				},
 			}},
@@ -568,17 +568,17 @@ func TestCollectRetryEmitsStepRetryScheduled(t *testing.T) {
 			{output: `{"software-version":"v24.3.2"}`},
 		},
 	}
-	targetCfg := nokia.Config{
+	targetCfg := validate.Config{
 		Name:   "validate_upgrade",
-		Type:   "nokia-validate",
+		Type:   "validate",
 		Source: "lab/leaf1/ssh",
-		Phases: []nokia.Phase{{
+		Phases: []validate.Phase{{
 			Name: "pre",
-			Steps: []nokia.Step{
-				{Name: "collect", Collect: &nokia.CollectSpec{
+			Steps: []validate.Step{
+				{Name: "collect", Collect: &validate.CollectSpec{
 					Into:    "version",
 					Command: "show version | as json",
-					Retry: &nokia.RetryPolicy{
+					Retry: &validate.RetryPolicy{
 						Interval:    "1ms",
 						MaxAttempts: 2,
 					},
