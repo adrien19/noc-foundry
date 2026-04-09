@@ -56,6 +56,17 @@ function renderToolset(toolset) {
   $("#toolset-subtitle").textContent = toolset?.description || "Inspect tools available in this toolset.";
   $("#toolset-name").textContent = displayName;
 
+  const promptsetEl = $("#toolset-promptset");
+  clear(promptsetEl);
+  if (toolset?.promptset) {
+    const link = el("a", "");
+    link.href = `/ui/promptsets?promptset=${encodeURIComponent(toolset.promptset)}`;
+    link.textContent = toolset.promptset;
+    promptsetEl.appendChild(link);
+  } else {
+    promptsetEl.textContent = "—";
+  }
+
   const toolsContainer = $("#toolset-tools");
   clear(toolsContainer);
 

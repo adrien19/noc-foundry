@@ -751,7 +751,12 @@ func processMcpMessage(ctx context.Context, body []byte, s *Server, protocolVers
 			span.SetAttributes(attribute.String("error.type", metricErrorType))
 			return "", rpcErr, err
 		}
-		promptset, ok := s.ResourceMgr.GetPromptset(promptsetName)
+		// Resolve promptset: if no promptsetName was provided in the URL, derive it from the toolset config.
+		resolvedPromptsetName := promptsetName
+		if resolvedPromptsetName == "" {
+			resolvedPromptsetName = toolset.ToConfig().Promptset
+		}
+		promptset, ok := s.ResourceMgr.GetPromptset(resolvedPromptsetName)
 		if !ok {
 			err := fmt.Errorf("promptset does not exist")
 			rpcErr := jsonrpc.NewError(baseMessage.Id, jsonrpc.INVALID_REQUEST, err.Error(), nil)

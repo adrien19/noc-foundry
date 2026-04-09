@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/adrien19/noc-foundry/internal/prompts"
 	"github.com/adrien19/noc-foundry/internal/tools"
 )
 
@@ -375,5 +376,172 @@ func TestToolsetsListEndpoint(t *testing.T) {
 	}
 	if got[0].ToolCount != 2 {
 		t.Fatalf("unexpected default toolset tool count: want 2, got %d", got[0].ToolCount)
+	}
+}
+
+func TestPromptsListEndpoint(t *testing.T) {
+	mockPrompts := []MockPrompt{prompt1, prompt2}
+	toolsMap, toolsets, promptsMap, promptsetsMap := setUpResources(t, nil, mockPrompts)
+	r, shutdown := setUpServer(t, "api", toolsMap, toolsets, promptsMap, promptsetsMap)
+	defer shutdown()
+	ts := runServer(r, false)
+	defer ts.Close()
+
+	resp, body, err := runRequest(ts, http.MethodGet, "/prompts", nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error during request: %s", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected status code: want %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	var got []promptListItem
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unable to parse prompts list response: %s", err)
+	}
+
+	if len(got) != 2 {
+		t.Fatalf("unexpected prompts count: want %d, got %d", 2, len(got))
+	}
+
+	names := make([]string, len(got))
+	for i, p := range got {
+		names[i] = p.Name
+	}
+
+	if !slices.Contains(names, prompt1.Name) {
+		t.Errorf("prompt %q not found in list", prompt1.Name)
+	}
+	if !slices.Contains(names, prompt2.Name) {
+		t.Errorf("prompt %q not found in list", prompt2.Name)
+	}
+
+	for _, p := range got {
+		if p.Name == prompt2.Name && p.ArgumentCount != 1 {
+			t.Errorf("unexpected argument count for %q: want 1, got %d", prompt2.Name, p.ArgumentCount)
+		}
+	}
+}
+
+func TestPromptsetsListEndpoint(t *testing.T) {
+	mockPrompts := []MockPrompt{prompt1, prompt2}
+	toolsMap, toolsets, promptsMap, promptsetsMap := setUpResources(t, nil, mockPrompts)
+
+	// add a named promptset alongside the default
+	namedPsc := prompts.PromptsetConfig{Name: "named-promptset", PromptNames: []string{prompt1.Name}}
+	namedPs, err := namedPsc.Initialize(fakeVersionString, promptsMap)
+	if err != nil {
+		t.Fatalf("unable to initialize named promptset: %s", err)
+	}
+	promptsetsMap["named-promptset"] = namedPs
+
+	r, shutdown := setUpServer(t, "api", toolsMap, toolsets, promptsMap, promptsetsMap)
+	defer shutdown()
+	ts := runServer(r, false)
+	defer ts.Close()
+
+	resp, body, err := runRequest(ts, http.MethodGet, "/promptsets", nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error during request: %s", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected status code: want %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	var got []promptsetListItem
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unable to parse promptsets list response: %s", err)
+	}
+
+	if len(got) != 2 {
+		t.Fatalf("unexpected promptsets count: want %d, got %d", 2, len(got))
+	}
+
+	names := make([]string, len(got))
+	for i, ps := range got {
+		names[i] = ps.Name
+	}
+	if !slices.Contains(names, "named-promptset") {
+		t.Errorf("promptset %q not found in list", "named-promptset")
+	}
+}
+
+func TestPromptsetEndpoint(t *testing.T) {
+	mockPrompts := []MockPrompt{prompt1, prompt2}
+	toolsMap, toolsets, promptsMap, promptsetsMap := setUpResources(t, nil, mockPrompts)
+
+	namedPsc := prompts.PromptsetConfig{Name: "my-promptset", PromptNames: []string{prompt1.Name, prompt2.Name}}
+	namedPs, err := namedPsc.Initialize(fakeVersionString, promptsMap)
+	if err != nil {
+		t.Fatalf("unable to initialize named promptset: %s", err)
+	}
+	promptsetsMap["my-promptset"] = namedPs
+
+	r, shutdown := setUpServer(t, "api", toolsMap, toolsets, promptsMap, promptsetsMap)
+	defer shutdown()
+	ts := runServer(r, false)
+	defer ts.Close()
+
+	type wantResponse struct {
+		statusCode  int
+		isErr       bool
+		promptNames []string
+	}
+
+	testCases := []struct {
+		name          string
+		promptsetName string
+		want          wantResponse
+	}{
+		{
+			name:          "existing promptset",
+			promptsetName: "my-promptset",
+			want: wantResponse{
+				statusCode:  http.StatusOK,
+				promptNames: []string{prompt1.Name, prompt2.Name},
+			},
+		},
+		{
+			name:          "non-existent promptset",
+			promptsetName: "does-not-exist",
+			want: wantResponse{
+				statusCode: http.StatusNotFound,
+				isErr:      true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, body, err := runRequest(ts, http.MethodGet, fmt.Sprintf("/promptset/%s", tc.promptsetName), nil, nil)
+			if err != nil {
+				t.Fatalf("unexpected error during request: %s", err)
+			}
+
+			if resp.StatusCode != tc.want.statusCode {
+				t.Logf("response body: %s", body)
+				t.Fatalf("unexpected status code: want %d, got %d", tc.want.statusCode, resp.StatusCode)
+			}
+			if tc.want.isErr {
+				return
+			}
+
+			var m prompts.PromptsetManifest
+			if err := json.Unmarshal(body, &m); err != nil {
+				t.Fatalf("unable to parse PromptsetManifest: %s", err)
+			}
+
+			if m.ServerVersion != fakeVersionString {
+				t.Fatalf("unexpected ServerVersion: want %q, got %q", fakeVersionString, m.ServerVersion)
+			}
+
+			for _, name := range tc.want.promptNames {
+				if _, ok := m.PromptsManifest[name]; !ok {
+					t.Errorf("prompt %q not found in manifest", name)
+				}
+			}
+		})
 	}
 }

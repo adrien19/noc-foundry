@@ -19,7 +19,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NOCFoundry · Toolsets</title>
+    <title>NOCFoundry · Prompts</title>
     <link rel="icon" href="/ui/static/assets/favicon.ico?v=20260405" sizes="any" />
     <link rel="icon" href="/ui/static/assets/nocfoundry-mark.svg?v=20260405" type="image/svg+xml" />
     <link rel="icon" type="image/png" sizes="32x32" href="/ui/static/assets/favicon-32x32.png?v=20260405" />
@@ -27,7 +27,7 @@
     <link rel="apple-touch-icon" href="/ui/static/assets/apple-touch-icon.png?v=20260405" />
     <link rel="stylesheet" href="/ui/static/css/app.css" />
   </head>
-  <body data-page="toolsets">
+  <body data-page="prompts">
     <div class="app-shell app-shell--workspace">
       <aside class="sidebar">
         <div class="sidebar__top">
@@ -54,13 +54,13 @@
             </span>
             <span class="nav__label">Tools</span>
           </a>
-          <a class="nav__link nav__link--active" href="/ui/toolsets" title="Toolsets">
+          <a class="nav__link" href="/ui/toolsets" title="Toolsets">
             <span class="nav__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="10" width="18" height="5" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="16" width="18" height="4" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
             </span>
             <span class="nav__label">Toolsets</span>
           </a>
-          <a class="nav__link" href="/ui/prompts" title="Prompts">
+          <a class="nav__link nav__link--active" href="/ui/prompts" title="Prompts">
             <span class="nav__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V14C20 15.1046 19.1046 16 18 16H13L9 19V16H6C4.89543 16 4 15.1046 4 14V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
             </span>
@@ -99,22 +99,19 @@
 
       <section class="list-pane">
         <div class="list-pane__header">
-          <div class="panel__label">Lookup</div>
-          <h2>Retrieve toolset</h2>
-          <div class="inline-search">
-            <input id="toolset-search" class="input" type="search" placeholder="Enter toolset name" />
-            <button id="toolset-search-button" class="button button--primary" type="button">Search</button>
-          </div>
+          <div class="panel__label">Catalog</div>
+          <h2>My prompts</h2>
+          <input id="prompt-search" class="input" type="search" placeholder="Search by name" />
         </div>
-        <div id="toolset-list" class="list"></div>
+        <div id="prompt-list" class="list"></div>
       </section>
 
       <main class="workspace">
         <header class="workspace-header">
           <div>
-            <div class="panel__label">Toolset details</div>
-            <h1 id="toolset-title">Select a toolset</h1>
-            <p id="toolset-subtitle" class="muted">Search for a toolset and inspect the tools it exposes.</p>
+            <div class="panel__label">Prompt details</div>
+            <h1 id="prompt-title">Select a prompt</h1>
+            <p id="prompt-subtitle" class="muted">Choose a prompt from the left to inspect its description and arguments.</p>
           </div>
         </header>
 
@@ -123,22 +120,22 @@
         <section class="workspace-grid">
           <article class="panel">
             <div class="panel__label">Name</div>
-            <div id="toolset-name">—</div>
+            <div id="prompt-name">—</div>
           </article>
 
           <article class="panel">
-            <div class="panel__label">Linked promptset</div>
-            <div id="toolset-promptset">—</div>
+            <div class="panel__label">Description</div>
+            <div id="prompt-description">Select a prompt to view its description.</div>
           </article>
 
           <article class="panel panel--full">
-            <div class="panel__label">Included tools</div>
-            <div id="toolset-tools" class="list list--compact"></div>
+            <div class="panel__label">Arguments</div>
+            <div id="prompt-arguments" class="list list--compact"></div>
           </article>
         </section>
       </main>
     </div>
 
-    <script type="module" src="/ui/static/js/toolsets-page.js"></script>
+    <script type="module" src="/ui/static/js/prompts-page.js"></script>
   </body>
 </html>
