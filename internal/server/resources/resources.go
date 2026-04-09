@@ -247,3 +247,13 @@ func (r *ResourceManager) GetPromptsMap() map[string]prompts.Prompt {
 	}
 	return copiedMap
 }
+
+func (r *ResourceManager) GetPromptsetsMap() map[string]prompts.Promptset {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	copiedMap := make(map[string]prompts.Promptset, len(r.promptsets))
+	for k, v := range r.promptsets {
+		copiedMap[k] = v
+	}
+	return copiedMap
+}

@@ -46,6 +46,9 @@ func apiRouter(s *Server) (chi.Router, error) {
 	r.Get("/toolset/{toolsetName}", func(w http.ResponseWriter, r *http.Request) { toolsetHandler(s, w, r) })
 	r.Get("/tools", func(w http.ResponseWriter, r *http.Request) { toolsListHandler(s, w, r) })
 	r.Get("/toolsets", func(w http.ResponseWriter, r *http.Request) { toolsetsListHandler(s, w, r) })
+	r.Get("/prompts", func(w http.ResponseWriter, r *http.Request) { promptsListHandler(s, w, r) })
+	r.Get("/promptsets", func(w http.ResponseWriter, r *http.Request) { promptsetsListHandler(s, w, r) })
+	r.Get("/promptset/{promptsetName}", func(w http.ResponseWriter, r *http.Request) { promptsetHandler(s, w, r) })
 	r.Get("/authservices", func(w http.ResponseWriter, r *http.Request) { authServicesHandler(s, w, r) })
 
 	r.Route("/tool/{toolName}", func(r chi.Router) {
@@ -67,6 +70,24 @@ type toolsetListItem struct {
 	Name        string `json:"name"`
 	DisplayName string `json:"displayName"`
 	ToolCount   int    `json:"toolCount"`
+}
+
+type promptListItem struct {
+	Name          string                         `json:"name"`
+	Description   string                         `json:"description"`
+	ArgumentCount int                            `json:"argumentCount"`
+	Arguments     []parameters.ParameterManifest `json:"arguments"`
+}
+
+type toolsetDetailResponse struct {
+	tools.ToolsetManifest
+	Promptset string `json:"promptset,omitempty"`
+}
+
+type promptsetListItem struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	PromptCount int    `json:"promptCount"`
 }
 
 // authServicesHandler returns a map of auth service name → auth service type.
@@ -102,7 +123,10 @@ func toolsetHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 		_ = render.Render(w, r, newErrResponse(err, http.StatusNotFound))
 		return
 	}
-	render.JSON(w, r, toolset.Manifest)
+	render.JSON(w, r, toolsetDetailResponse{
+		ToolsetManifest: toolset.Manifest,
+		Promptset:       toolset.ToConfig().Promptset,
+	})
 }
 
 func toolsListHandler(s *Server, w http.ResponseWriter, r *http.Request) {
@@ -149,6 +173,77 @@ func toolsetsListHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, result)
+}
+
+func promptsListHandler(s *Server, w http.ResponseWriter, r *http.Request) {
+	promptsMap := s.ResourceMgr.GetPromptsMap()
+	promptNames := make([]string, 0, len(promptsMap))
+	for name := range promptsMap {
+		promptNames = append(promptNames, name)
+	}
+	sort.Strings(promptNames)
+
+	result := make([]promptListItem, 0, len(promptNames))
+	for _, name := range promptNames {
+		manifest := promptsMap[name].Manifest()
+		result = append(result, promptListItem{
+			Name:          name,
+			Description:   manifest.Description,
+			ArgumentCount: len(manifest.Arguments),
+			Arguments:     manifest.Arguments,
+		})
+	}
+
+	render.JSON(w, r, result)
+}
+
+func promptsetsListHandler(s *Server, w http.ResponseWriter, r *http.Request) {
+	promptsetsMap := s.ResourceMgr.GetPromptsetsMap()
+	promptsetNames := make([]string, 0, len(promptsetsMap))
+	for name := range promptsetsMap {
+		promptsetNames = append(promptsetNames, name)
+	}
+	sort.Strings(promptsetNames)
+
+	result := make([]promptsetListItem, 0, len(promptsetNames))
+	for _, name := range promptsetNames {
+		displayName := name
+		if name == "" {
+			displayName = "default"
+		}
+		result = append(result, promptsetListItem{
+			Name:        name,
+			DisplayName: displayName,
+			PromptCount: len(promptsetsMap[name].Manifest.PromptsManifest),
+		})
+	}
+
+	render.JSON(w, r, result)
+}
+
+func promptsetHandler(s *Server, w http.ResponseWriter, r *http.Request) {
+	ctx, span := s.instrumentation.Tracer.Start(r.Context(), "nocfoundry/server/promptset/get")
+	r = r.WithContext(ctx)
+
+	promptsetName := chi.URLParam(r, "promptsetName")
+	s.logger.DebugContext(ctx, fmt.Sprintf("promptset name: %s", promptsetName))
+	span.SetAttributes(attribute.String("promptset.name", promptsetName))
+	var err error
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
+	promptset, ok := s.ResourceMgr.GetPromptset(promptsetName)
+	if !ok {
+		err = fmt.Errorf("promptset %q does not exist", promptsetName)
+		s.logger.DebugContext(ctx, err.Error())
+		_ = render.Render(w, r, newErrResponse(err, http.StatusNotFound))
+		return
+	}
+	render.JSON(w, r, promptset.Manifest)
 }
 
 // toolGetHandler handles requests for a single Tool.

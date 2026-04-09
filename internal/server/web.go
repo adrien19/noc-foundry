@@ -56,6 +56,8 @@ func RegisterWebUI(r chi.Router, s *Server) error {
 		r.Get("/", serveHTML("index.html"))
 		r.Get("/tools", serveHTML("tools.html"))
 		r.Get("/toolsets", serveHTML("toolsets.html"))
+		r.Get("/prompts", serveHTML("prompts.html"))
+		r.Get("/promptsets", serveHTML("promptsets.html"))
 		r.Get("/auth/callback", serveHTML("auth-callback.html"))
 		r.Get("/auth/config", serveUIAuthConfig(s))
 		r.Handle("/static/*", http.StripPrefix("/ui/static/", cacheStatic(assetServer)))

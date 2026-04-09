@@ -201,7 +201,63 @@ export async function fetchToolset(name) {
   return {
     name,
     description: payload?.description || payload?.summary || "Toolset details",
+    promptset: payload?.promptset || "",
     tools,
+    raw: payload
+  };
+}
+
+export async function fetchPrompts() {
+  const res = await apiFetch("/api/prompts", {
+    headers: { Accept: "application/json" }
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load prompts (${res.status})`);
+  }
+
+  const payload = readJSONSafe(await res.text());
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function fetchPromptsets() {
+  const res = await apiFetch("/api/promptsets", {
+    headers: { Accept: "application/json" }
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load promptsets (${res.status})`);
+  }
+
+  const payload = readJSONSafe(await res.text());
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function fetchPromptset(name) {
+  const res = await apiFetch(`/api/promptset/${encodeURIComponent(name)}`, {
+    headers: { Accept: "application/json" }
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load promptset (${res.status})`);
+  }
+
+  const text = await res.text();
+  const payload = readJSONSafe(text) || {};
+
+  const prompts = Object.entries(payload?.prompts || {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([pName, p]) => ({
+      name: pName,
+      description: p?.description || "No description available.",
+      argumentCount: Array.isArray(p?.arguments) ? p.arguments.length : 0,
+      arguments: p?.arguments || []
+    }));
+
+  return {
+    name,
+    serverVersion: payload?.serverVersion || "",
+    prompts,
     raw: payload
   };
 }
