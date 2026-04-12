@@ -31,6 +31,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/devicegroups"
 	"github.com/adrien19/noc-foundry/internal/embeddingmodels"
 	"github.com/adrien19/noc-foundry/internal/log"
+	"github.com/adrien19/noc-foundry/internal/network/schemas"
 	"github.com/adrien19/noc-foundry/internal/prompts"
 	"github.com/adrien19/noc-foundry/internal/server/resources"
 	"github.com/adrien19/noc-foundry/internal/sources"
@@ -112,6 +113,22 @@ func InitializeConfigs(ctx context.Context, cfg ServerConfig) (
 		sourceNames = append(sourceNames, name)
 	}
 	l.InfoContext(ctx, fmt.Sprintf("Initialized %d sources: %s", len(sourcesMap), strings.Join(sourceNames, ", ")))
+
+	// Load YANG schemas and build schema-derived profiles (optional).
+	if cfg.SchemaDir != "" {
+		store := schemas.NewSchemaStore()
+		loaded, schemaErrs := schemas.LoadFromDirectory(store, cfg.SchemaDir)
+		for _, e := range schemaErrs {
+			l.WarnContext(ctx, fmt.Sprintf("Schema load warning: %v", e))
+		}
+		if loaded > 0 {
+			l.InfoContext(ctx, fmt.Sprintf("Loaded %d YANG schema bundles from %s", loaded, cfg.SchemaDir))
+			schemas.BuildAndRegisterProfiles(store)
+			schemas.SetDefault(store)
+		} else {
+			l.WarnContext(ctx, fmt.Sprintf("No YANG schema bundles loaded from %s", cfg.SchemaDir))
+		}
+	}
 
 	// initialize and validate the auth services from configs
 	authServicesMap := make(map[string]auth.AuthService)

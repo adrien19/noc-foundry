@@ -14,6 +14,9 @@
 
 package profiles
 
+// Nokia SR Linux hardcoded profile. Contains only CLI paths; gNMI and
+// NETCONF paths are generated from compiled YANG schemas at startup by
+// schemas.BuildAndRegisterProfiles and merged via MergeProfiles.
 func init() {
 	Register(&Profile{
 		Vendor:   "nokia",
@@ -22,22 +25,6 @@ func init() {
 			OpGetInterfaces: {
 				OperationID: OpGetInterfaces,
 				Paths: []ProtocolPath{
-					{
-						Protocol: ProtocolGnmiOpenConfig,
-						Paths:    []string{"/openconfig-interfaces:interfaces/interface"},
-					},
-					{
-						Protocol: ProtocolGnmiNative,
-						Paths:    []string{"/srl_nokia-interfaces:interface"},
-					},
-					{
-						Protocol: ProtocolNetconfOpenConfig,
-						Filter:   `<interfaces xmlns="http://openconfig.net/yang/interfaces"/>`,
-					},
-					{
-						Protocol: ProtocolNetconfNative,
-						Filter:   `<interface xmlns="urn:nokia.com:srlinux:chassis:interfaces"/>`,
-					},
 					// JSON CLI path is preferred for structured output; falls back to
 					// text if the device firmware does not support the | json flag.
 					{
@@ -56,31 +43,6 @@ func init() {
 			OpGetSystemVersion: {
 				OperationID: OpGetSystemVersion,
 				Paths: []ProtocolPath{
-					{
-						Protocol: ProtocolGnmiOpenConfig,
-						Paths: []string{
-							"/openconfig-system:system/state",
-							"/openconfig-platform:components/component[name=chassis]/state",
-						},
-					},
-					{
-						Protocol: ProtocolGnmiNative,
-						// Fetch both the version info and the system name in one Get.
-						Paths: []string{
-							"/srl_nokia-system:system/information",
-							"/srl_nokia-system:system/name",
-						},
-					},
-					{
-						Protocol: ProtocolNetconfOpenConfig,
-						Filter:   `<system xmlns="http://openconfig.net/yang/system"/><components xmlns="http://openconfig.net/yang/platform"/>`,
-					},
-					{
-						Protocol: ProtocolNetconfNative,
-						// Each child element needs its own namespace since SR Linux
-						// splits system info across separate YANG modules.
-						Filter: `<system xmlns="urn:nokia.com:srlinux:general:system"><information xmlns="urn:nokia.com:srlinux:linux:system-info"/><name xmlns="urn:nokia.com:srlinux:chassis:system-name"/></system>`,
-					},
 					{
 						Protocol:  ProtocolCLI,
 						Command:   "show version",

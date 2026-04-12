@@ -150,12 +150,13 @@ func TestProtocolPreferenceOrder(t *testing.T) {
 		t.Fatalf("expected at least 2 protocol paths, got %d", len(op.Paths))
 	}
 
-	// First path should be gnmi_openconfig (highest preference).
-	if op.Paths[0].Protocol != profiles.ProtocolGnmiOpenConfig {
-		t.Errorf("first protocol path = %q, want %q", op.Paths[0].Protocol, profiles.ProtocolGnmiOpenConfig)
+	// Without schema loading, hardcoded profile only has CLI paths.
+	// First path should be CLI (json format).
+	if op.Paths[0].Protocol != profiles.ProtocolCLI {
+		t.Errorf("first protocol path = %q, want %q", op.Paths[0].Protocol, profiles.ProtocolCLI)
 	}
 
-	// Last path should be CLI (fallback).
+	// Last path should also be CLI (text format fallback).
 	last := op.Paths[len(op.Paths)-1]
 	if last.Protocol != profiles.ProtocolCLI {
 		t.Errorf("last protocol path = %q, want %q", last.Protocol, profiles.ProtocolCLI)

@@ -1,0 +1,279 @@
+// Copyright 2026 Adrien Ndikumana
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schemas
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/adrien19/noc-foundry/internal/network/profiles"
+)
+
+// BuildProfile generates a profiles.Profile from a compiled SchemaBundle
+// using the given operation mappings. For each mapping, it resolves
+// native and OpenConfig YANG paths against the schema tree and
+// generates gNMI paths and NETCONF filters.
+//
+// CLI paths are NOT generated — they must come from the hardcoded
+// profile fallback.
+//
+// Returns the built profile and a list of warnings for paths that
+// couldn't be resolved (version drift, missing models, etc.).
+func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.Profile, []string) {
+	var warnings []string
+	ops := make(map[string]profiles.OperationDescriptor)
+
+	for _, m := range mappings {
+		// Collect resolved paths by protocol, combining gNMI paths and
+		// NETCONF filters so each protocol appears as a single ProtocolPath.
+		var ocGnmiPaths []string
+		var ocNetconfFilters []string
+		var nativeGnmiPaths []string
+		var nativeNetconfFilters []string
+
+		// Resolve OpenConfig paths.
+		for _, ocPath := range m.OCPaths {
+			resolved, err := bundle.ResolvePath(ocPath)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("operation %s: OC path %s: %v", m.OperationID, ocPath, err))
+				continue
+			}
+			ocGnmiPaths = append(ocGnmiPaths, resolved.GnmiPaths...)
+			if resolved.NetconfFilter != "" {
+				ocNetconfFilters = append(ocNetconfFilters, resolved.NetconfFilter)
+			}
+		}
+
+		// Resolve native YANG paths.
+		for _, nativePath := range m.NativePaths {
+			resolved, err := bundle.ResolvePath(nativePath)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("operation %s: native path %s: %v", m.OperationID, nativePath, err))
+				continue
+			}
+			nativeGnmiPaths = append(nativeGnmiPaths, resolved.GnmiPaths...)
+			if resolved.NetconfFilter != "" {
+				nativeNetconfFilters = append(nativeNetconfFilters, resolved.NetconfFilter)
+			}
+		}
+
+		// Build combined ProtocolPaths (one per protocol).
+		var paths []profiles.ProtocolPath
+		if len(ocGnmiPaths) > 0 {
+			paths = append(paths, profiles.ProtocolPath{
+				Protocol: profiles.ProtocolGnmiOpenConfig,
+				Paths:    ocGnmiPaths,
+			})
+		}
+		if len(ocNetconfFilters) > 0 {
+			paths = append(paths, profiles.ProtocolPath{
+				Protocol: profiles.ProtocolNetconfOpenConfig,
+				Filter:   combineNetconfFilters(ocNetconfFilters),
+			})
+		}
+		if len(nativeGnmiPaths) > 0 {
+			paths = append(paths, profiles.ProtocolPath{
+				Protocol: profiles.ProtocolGnmiNative,
+				Paths:    nativeGnmiPaths,
+			})
+		}
+		if len(nativeNetconfFilters) > 0 {
+			paths = append(paths, profiles.ProtocolPath{
+				Protocol: profiles.ProtocolNetconfNative,
+				Filter:   combineNetconfFilters(nativeNetconfFilters),
+			})
+		}
+
+		if len(paths) > 0 {
+			ops[m.OperationID] = profiles.OperationDescriptor{
+				OperationID: m.OperationID,
+				Paths:       paths,
+			}
+		} else {
+			warnings = append(warnings, fmt.Sprintf("operation %s: no paths resolved", m.OperationID))
+		}
+	}
+
+	profile := &profiles.Profile{
+		Vendor:     bundle.Key.Vendor,
+		Platform:   bundle.Key.Platform,
+		Operations: ops,
+	}
+
+	return profile, warnings
+}
+
+// combineNetconfFilters merges multiple NETCONF subtree filters.
+// If filters share the same outermost element (same tag+namespace), their
+// inner content is merged into one element. Otherwise filters are concatenated.
+func combineNetconfFilters(filters []string) string {
+	if len(filters) == 0 {
+		return ""
+	}
+	if len(filters) == 1 {
+		return filters[0]
+	}
+
+	// Try to merge filters that share the same root element.
+	// A nested filter looks like: <system xmlns="ns">..inner..</system>
+	// A leaf filter looks like: <interface xmlns="ns"/>
+	type parsedFilter struct {
+		openTag  string // e.g., `<system xmlns="ns">`
+		closeTag string // e.g., `</system>`
+		inner    string // inner content (empty for self-closing)
+		raw      string // original string
+	}
+
+	parsed := make([]parsedFilter, 0, len(filters))
+	for _, f := range filters {
+		pf := parsedFilter{raw: f}
+		// Find the end of the first tag.
+		tagEnd := strings.Index(f, ">")
+		if tagEnd < 0 {
+			parsed = append(parsed, pf)
+			continue
+		}
+
+		firstTag := f[:tagEnd+1]
+		// Self-closing: <element xmlns="ns"/>
+		if strings.HasSuffix(firstTag, "/>") {
+			pf.openTag = strings.TrimSuffix(firstTag, "/>") + ">"
+			// Extract element name for close tag.
+			name := extractElementName(firstTag)
+			pf.closeTag = "</" + name + ">"
+			pf.inner = ""
+		} else {
+			pf.openTag = firstTag
+			// Find the matching close tag.
+			name := extractElementName(firstTag)
+			pf.closeTag = "</" + name + ">"
+			closeIdx := strings.LastIndex(f, pf.closeTag)
+			if closeIdx > tagEnd {
+				pf.inner = f[tagEnd+1 : closeIdx]
+			}
+		}
+		parsed = append(parsed, pf)
+	}
+
+	// Group by openTag.
+	groups := make(map[string][]parsedFilter)
+	var order []string
+	for _, pf := range parsed {
+		if pf.openTag == "" {
+			// Unparseable, keep raw.
+			groups[pf.raw] = append(groups[pf.raw], pf)
+			order = append(order, pf.raw)
+			continue
+		}
+		if _, exists := groups[pf.openTag]; !exists {
+			order = append(order, pf.openTag)
+		}
+		groups[pf.openTag] = append(groups[pf.openTag], pf)
+	}
+
+	var result []string
+	for _, key := range order {
+		group := groups[key]
+		if len(group) == 1 {
+			result = append(result, group[0].raw)
+			continue
+		}
+		// Merge inner contents.
+		var inners []string
+		for _, pf := range group {
+			if pf.inner != "" {
+				inners = append(inners, pf.inner)
+			}
+		}
+		if len(inners) > 0 {
+			result = append(result, group[0].openTag+strings.Join(inners, "")+group[0].closeTag)
+		} else {
+			result = append(result, group[0].raw)
+		}
+	}
+
+	return strings.Join(result, "")
+}
+
+// extractElementName extracts the element name from an XML open tag.
+// e.g., `<system xmlns="ns">` -> "system", `<interface/>` -> "interface"
+func extractElementName(tag string) string {
+	s := strings.TrimPrefix(tag, "<")
+	// Find end of element name (space, /, or >).
+	for i, c := range s {
+		if c == ' ' || c == '/' || c == '>' {
+			return s[:i]
+		}
+	}
+	return s
+}
+
+// MergeProfiles merges a schema-derived profile with a hardcoded fallback
+// profile. Schema-derived gNMI and NETCONF paths replace the hardcoded
+// ones, while CLI paths are preserved from the fallback.
+func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile {
+	if fallback == nil {
+		return schemaProfile
+	}
+	if schemaProfile == nil {
+		return fallback
+	}
+
+	merged := &profiles.Profile{
+		Vendor:     schemaProfile.Vendor,
+		Platform:   schemaProfile.Platform,
+		Operations: make(map[string]profiles.OperationDescriptor),
+	}
+
+	// Start with all operations from the fallback.
+	for opID, op := range fallback.Operations {
+		merged.Operations[opID] = op
+	}
+
+	// For each schema-derived operation, replace gNMI/NETCONF paths
+	// but keep CLI paths from the fallback.
+	for opID, schemaOp := range schemaProfile.Operations {
+		fallbackOp, hasFallback := fallback.Operations[opID]
+
+		var mergedPaths []profiles.ProtocolPath
+
+		// Add schema-derived gNMI/NETCONF paths first (preferred).
+		for _, pp := range schemaOp.Paths {
+			if !isCLIProtocol(pp.Protocol) {
+				mergedPaths = append(mergedPaths, pp)
+			}
+		}
+
+		// Carry over CLI paths from the fallback.
+		if hasFallback {
+			for _, pp := range fallbackOp.Paths {
+				if isCLIProtocol(pp.Protocol) {
+					mergedPaths = append(mergedPaths, pp)
+				}
+			}
+		}
+
+		merged.Operations[opID] = profiles.OperationDescriptor{
+			OperationID: opID,
+			Paths:       mergedPaths,
+		}
+	}
+
+	return merged
+}
+
+func isCLIProtocol(p profiles.Protocol) bool {
+	return p == profiles.ProtocolCLI
+}

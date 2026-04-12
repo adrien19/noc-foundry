@@ -42,6 +42,7 @@ func (m *testSource) SourceType() string             { return "ssh" }
 func (m *testSource) ToConfig() sources.SourceConfig { return nil }
 func (m *testSource) DeviceVendor() string           { return "nokia" }
 func (m *testSource) DevicePlatform() string         { return "srlinux" }
+func (m *testSource) DeviceVersion() string          { return "" }
 func (m *testSource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{CLI: true}
 }
@@ -74,6 +75,7 @@ func (m *retryingTestSource) SourceType() string             { return "ssh" }
 func (m *retryingTestSource) ToConfig() sources.SourceConfig { return nil }
 func (m *retryingTestSource) DeviceVendor() string           { return "nokia" }
 func (m *retryingTestSource) DevicePlatform() string         { return "srlinux" }
+func (m *retryingTestSource) DeviceVersion() string          { return "" }
 func (m *retryingTestSource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{CLI: true}
 }

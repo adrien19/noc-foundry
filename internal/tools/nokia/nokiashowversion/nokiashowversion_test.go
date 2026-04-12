@@ -129,6 +129,7 @@ func (m *mockSource) SourceType() string             { return "ssh" }
 func (m *mockSource) ToConfig() sources.SourceConfig { return nil }
 func (m *mockSource) DeviceVendor() string           { return "nokia" }
 func (m *mockSource) DevicePlatform() string         { return "srlinux" }
+func (m *mockSource) DeviceVersion() string          { return "" }
 func (m *mockSource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{CLI: true}
 }

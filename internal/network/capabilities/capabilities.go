@@ -71,4 +71,5 @@ type CapabilityProvider interface {
 type SourceIdentity interface {
 	DeviceVendor() string
 	DevicePlatform() string
+	DeviceVersion() string
 }

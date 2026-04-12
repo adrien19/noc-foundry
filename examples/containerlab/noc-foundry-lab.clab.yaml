@@ -18,6 +18,7 @@ topology:
   defaults:
     kind: nokia_srlinux
     image: ghcr.io/nokia/srlinux:24.10
+    # image: ghcr.io/nokia/srlinux:25.10
 
   nodes:
     srl-a:

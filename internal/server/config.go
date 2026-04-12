@@ -84,6 +84,11 @@ type ServerConfig struct {
 	ValidationRuns ValidationRunConfig
 	// Auth configures server-scoped authentication policy for HTTP surfaces.
 	Auth ServerAuthConfig
+	// SchemaDir specifies an optional directory containing vendor YANG models.
+	// Expected structure: <schema-dir>/<vendor>/<platform>/<version>/*.yang
+	// When set, YANG models are compiled at startup and used to build
+	// schema-derived profiles (overriding hardcoded defaults for gNMI/NETCONF paths).
+	SchemaDir string
 }
 
 type ValidationRunConfig struct {
