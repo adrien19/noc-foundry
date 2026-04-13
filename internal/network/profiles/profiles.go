@@ -143,6 +143,16 @@ func Lookup(vendor, platform string) (*Profile, bool) {
 	return p, ok
 }
 
+// RegisterOrReplace registers a profile, replacing any existing one.
+// Used by schema-driven profile builder to override init()-registered
+// hardcoded profiles when a schema is available.
+func RegisterOrReplace(profile *Profile) {
+	key := profileKey(profile.Vendor, profile.Platform)
+	mu.Lock()
+	defer mu.Unlock()
+	registry[key] = profile
+}
+
 // AllProfiles returns a snapshot of all registered profiles.
 func AllProfiles() map[string]*Profile {
 	mu.RLock()

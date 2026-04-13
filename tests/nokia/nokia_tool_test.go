@@ -21,12 +21,12 @@ import (
 	"testing"
 
 	"github.com/adrien19/noc-foundry/internal/sources"
-	"github.com/adrien19/noc-foundry/internal/tools/nokia/nokiashow"
+	networkshow "github.com/adrien19/noc-foundry/internal/tools/network/show"
 )
 
-// TestNokiaShowToolAdHoc exercises the nokia-show tool in ad-hoc mode,
+// TestNetworkShowToolAdHoc exercises the network-show tool in ad-hoc mode,
 // where the command is supplied at invocation time.
-func TestNokiaShowToolAdHoc(t *testing.T) {
+func TestNetworkShowToolAdHoc(t *testing.T) {
 	dev := labDevices[0] // leaf1
 
 	sshSrc, err := newSSHSource(dev)
@@ -37,9 +37,9 @@ func TestNokiaShowToolAdHoc(t *testing.T) {
 	sourceName := dev.Name + "/ssh"
 	srcMap := map[string]sources.Source{sourceName: sshSrc}
 
-	cfg := nokiashow.Config{
+	cfg := networkshow.Config{
 		Name:   "test_show_adhoc",
-		Type:   "nokia-show",
+		Type:   "network-show",
 		Source: sourceName,
 	}
 
@@ -60,12 +60,12 @@ func TestNokiaShowToolAdHoc(t *testing.T) {
 		t.Fatal("tool invoke returned nil result")
 	}
 
-	t.Logf("nokia-show ad-hoc result: %v", result)
+	t.Logf("network-show ad-hoc result: %v", result)
 }
 
-// TestNokiaShowToolPredefined exercises the nokia-show tool in
+// TestNetworkShowToolPredefined exercises the network-show tool in
 // predefined-command mode with a parameterized command template.
-func TestNokiaShowToolPredefined(t *testing.T) {
+func TestNetworkShowToolPredefined(t *testing.T) {
 	dev := labDevices[0]
 
 	sshSrc, err := newSSHSource(dev)
@@ -76,13 +76,13 @@ func TestNokiaShowToolPredefined(t *testing.T) {
 	sourceName := dev.Name + "/ssh"
 	srcMap := map[string]sources.Source{sourceName: sshSrc}
 
-	cfg := nokiashow.Config{
+	cfg := networkshow.Config{
 		Name:        "test_show_interface_detail",
-		Type:        "nokia-show",
+		Type:        "network-show",
 		Source:      sourceName,
 		Description: "Show interface detail",
 		Command:     "show interface {interface}",
-		ExtraParams: []nokiashow.CommandParam{
+		ExtraParams: []networkshow.CommandParam{
 			{Name: "interface", Type: "string", Description: "Interface name"},
 		},
 	}
@@ -104,11 +104,11 @@ func TestNokiaShowToolPredefined(t *testing.T) {
 		t.Fatal("tool invoke returned nil result")
 	}
 
-	t.Logf("nokia-show predefined result: %v", result)
+	t.Logf("network-show predefined result: %v", result)
 }
 
-// TestNokiaShowToolWithJQ exercises ad-hoc mode with a runtime jq transform.
-func TestNokiaShowToolWithJQ(t *testing.T) {
+// TestNetworkShowToolWithJQ exercises ad-hoc mode with a runtime jq transform.
+func TestNetworkShowToolWithJQ(t *testing.T) {
 	dev := labDevices[0]
 
 	sshSrc, err := newSSHSource(dev)
@@ -119,9 +119,9 @@ func TestNokiaShowToolWithJQ(t *testing.T) {
 	sourceName := dev.Name + "/ssh"
 	srcMap := map[string]sources.Source{sourceName: sshSrc}
 
-	cfg := nokiashow.Config{
+	cfg := networkshow.Config{
 		Name:   "test_show_jq",
-		Type:   "nokia-show",
+		Type:   "network-show",
 		Source: sourceName,
 	}
 
@@ -143,5 +143,5 @@ func TestNokiaShowToolWithJQ(t *testing.T) {
 		t.Fatal("tool invoke with jq returned nil result")
 	}
 
-	t.Logf("nokia-show with jq result: %v", result)
+	t.Logf("network-show with jq result: %v", result)
 }

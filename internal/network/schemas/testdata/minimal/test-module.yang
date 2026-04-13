@@ -1,0 +1,50 @@
+module test-module {
+  namespace "urn:example:test-module";
+  prefix tm;
+
+  revision 2024-01-01 {
+    description "Initial revision for unit testing.";
+  }
+
+  container interfaces {
+    list interface {
+      key "name";
+      leaf name {
+        type string;
+        description "Interface name.";
+      }
+      leaf admin-status {
+        type enumeration {
+          enum UP;
+          enum DOWN;
+        }
+      }
+      leaf oper-status {
+        type enumeration {
+          enum UP;
+          enum DOWN;
+        }
+      }
+      leaf mtu {
+        type uint16;
+      }
+      leaf description {
+        type string;
+      }
+    }
+  }
+
+  container system {
+    container information {
+      leaf hostname {
+        type string;
+      }
+      leaf version {
+        type string;
+      }
+      leaf description {
+        type string;
+      }
+    }
+  }
+}

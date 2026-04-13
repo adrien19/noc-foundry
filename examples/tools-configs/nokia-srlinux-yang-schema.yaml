@@ -1,0 +1,301 @@
+# Nokia SR Linux YANG-schema-driven lab catalog.
+#
+# This example demonstrates how YANG model schemas enhance protocol-level
+# operations.  When you pass `--schema-dir yang-models` the server:
+#
+#   1. Discovers <schema-dir>/<vendor>/<platform>/<version>/ directories.
+#   2. Compiles all YANG files with goyang (recursive, cross-module imports).
+#   3. Validates operation paths against the schema (version-drift detection).
+#   4. Builds schema-derived profiles that override hardcoded defaults for
+#      gNMI and NETCONF path resolution.
+#
+# Expected YANG directory layout:
+#
+#   yang-models/
+#     nokia/
+#       srlinux/
+#         v25.10/ -> <cloned srlinux-yang-models repo>
+#           iana/
+#           ietf/
+#           openconfig/
+#           srl_nokia/
+#
+# Setup:
+#
+#   git clone -b v25.10 --depth 1 \
+#     https://github.com/nokia/srlinux-yang-models yang-models/
+#   mkdir -p yang-models/nokia/srlinux
+#   mv yang-models/srlinux-yang-models yang-models/.srlinux-yang-models-src
+#   ln -s ../../.srlinux-yang-models-src yang-models/nokia/srlinux/v25.10
+#
+# Start the server:
+#
+#   ./nocfoundry \
+#     --tools-file examples/tools-configs/nokia-srlinux-yang-schema.yaml \
+#     --schema-dir yang-models \
+#     --ui
+#
+# The `version` field on each source template links the device to the
+# compiled YANG bundle (nokia.srlinux.v25.10).  When a tool invokes
+# `get_interfaces` or `get_system_version`, the schema-derived profile
+# supplies the correct gNMI and NETCONF paths automatically.
+#
+# Default hosts match the management subnet in
+# `examples/containerlab/noc-foundry-lab.clab.yaml`.
+
+---
+kind: deviceGroups
+name: nokia-yang-lab
+type: static
+sourceTemplates:
+  ssh:
+    type: ssh
+    port: ${SSH_PORT:22}
+    username: ${SSH_USER:admin}
+    password: ${SSH_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    # version: v25.10
+    version: v24.10
+    timeout: 30s
+  gnmi:
+    type: gnmi
+    port: ${GNMI_PORT:57400}
+    tls_insecure: true
+    username: ${GNMI_USER:admin}
+    password: ${GNMI_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    # version: v25.10
+    version: v24.10
+    native_yang: true
+    openconfig: false
+  netconf:
+    type: netconf
+    port: ${NETCONF_PORT:830}
+    username: ${SSH_USER:admin}
+    password: ${SSH_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    # version: v25.10
+    version: v24.10
+    native_yang: true
+    openconfig: false
+    timeout: 30s
+devices:
+  - name: spine-1
+    host: ${SPINE1_HOST:172.31.250.12}
+    labels:
+      role: spine
+      vendor: nokia
+      site: lab-east
+  - name: spine-2
+    host: ${SPINE2_HOST:172.31.250.13}
+    labels:
+      role: spine
+      vendor: nokia
+      site: lab-east
+  - name: leaf-1
+    host: ${LEAF1_HOST:172.31.250.11}
+    labels:
+      role: leaf
+      vendor: nokia
+      site: lab-east
+
+---
+# Schema-driven interface inspection via gNMI.
+# The gNMI paths are resolved from the compiled YANG schema rather than
+# hardcoded defaults, so they stay correct across SR Linux releases.
+kind: tools
+name: show_spine1_interfaces_gnmi
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/gnmi
+
+---
+# Same operation over NETCONF — the schema-derived profile supplies the
+# correct NETCONF filter and namespace automatically.
+kind: tools
+name: show_spine1_interfaces_netconf
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/netconf
+
+---
+# SSH fallback — CLI paths are merged from the hardcoded profile.
+kind: tools
+name: show_spine1_interfaces_ssh
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/ssh
+
+---
+kind: tools
+name: show_spine1_version
+type: network-show-version
+source: nokia-yang-lab/spine-1/ssh
+
+---
+# Generic CLI show for ad-hoc exploration.
+kind: tools
+name: show_spine1_command
+type: network-show
+source: nokia-yang-lab/spine-1/ssh
+description: >-
+  Run any read-only CLI command on spine-1 and optionally filter the result
+  with a runtime jq expression.
+
+---
+kind: tools
+name: show_leaf1_interfaces_gnmi
+type: network-show-interfaces
+source: nokia-yang-lab/leaf-1/gnmi
+
+---
+kind: tools
+name: show_leaf1_version
+type: network-show-version
+source: nokia-yang-lab/leaf-1/ssh
+
+---
+kind: toolsets
+name: yang-schema-operations
+description: >-
+  Read-only Nokia SR Linux inspection workflow powered by YANG-schema-derived
+  profiles.  gNMI and NETCONF paths are resolved from the compiled v25.10
+  YANG models at startup.
+tools:
+  - show_spine1_interfaces_gnmi
+  - show_spine1_interfaces_netconf
+  - show_spine1_interfaces_ssh
+  - show_spine1_version
+  - show_spine1_command
+  - show_leaf1_interfaces_gnmi
+  - show_leaf1_version
+
+
+# ============================================================================
+# Additional Vendor-Agnostic Tools (alternative naming examples)
+#
+# These tools demonstrate alternative naming conventions using the same
+# vendor-agnostic `network-*` tool types.  The executor automatically
+# detects the device's vendor and platform from the source and routes
+# through the correct profile.
+# ============================================================================
+
+# --- Single-source vendor-agnostic interface inspection ---
+
+---
+# Vendor-agnostic gNMI interface query with alternative naming convention.
+kind: tools
+name: net_spine1_interfaces_gnmi
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/gnmi
+
+---
+kind: tools
+name: net_spine1_interfaces_netconf
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/netconf
+
+---
+kind: tools
+name: net_spine1_interfaces_ssh
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/ssh
+
+---
+# Vendor-agnostic system version.
+kind: tools
+name: net_spine1_version
+type: network-show-version
+source: nokia-yang-lab/spine-1/ssh
+
+---
+kind: tools
+name: net_leaf1_version
+type: network-show-version
+source: nokia-yang-lab/leaf-1/ssh
+
+
+# --- Fleet-wide vendor-agnostic tools (sourceSelector) ---
+
+---
+# Query interfaces across ALL spines in the lab using label selectors.
+# The LLM can pass 'device' to target a single spine, or omit it to
+# fan-out across all matching devices.
+kind: tools
+name: net_all_spine_interfaces
+type: network-show-interfaces
+sourceSelector:
+  matchLabels:
+    role: spine
+    vendor: nokia
+
+---
+# Fleet-wide version check for all devices.
+kind: tools
+name: net_all_device_versions
+type: network-show-version
+sourceSelector:
+  matchLabels:
+    vendor: nokia
+
+
+# --- Generic network-query tool ---
+
+---
+# The network-query tool accepts an 'operation' parameter at invocation
+# time, so the LLM can request any registered profile operation without
+# a dedicated tool per operation.  Valid operations include
+# get_interfaces and get_system_version.
+kind: tools
+name: query_spine1
+type: network-query
+source: nokia-yang-lab/spine-1/gnmi
+description: >-
+  Execute any supported query operation on spine-1 via gNMI.  Pass
+  'operation' (e.g. get_interfaces, get_system_version) to retrieve
+  structured, canonical data.
+
+---
+# Fleet-wide generic query — combine with device targeting.
+kind: tools
+name: query_all_devices
+type: network-query
+description: >-
+  Execute any supported query operation across all Nokia lab devices.
+  Pass 'operation' and optionally 'device' to target a specific node.
+sourceSelector:
+  matchLabels:
+    vendor: nokia
+
+---
+kind: toolsets
+name: vendor-agnostic-operations
+description: >-
+  Vendor-agnostic network inspection workflow.  These tools use the generic
+  network-show-interfaces, network-show-version, and network-query types
+  that work across any vendor with a registered profile.  They are
+  functionally equivalent to the Nokia-specific tools but portable.
+tools:
+  - net_spine1_interfaces_gnmi
+  - net_spine1_interfaces_netconf
+  - net_spine1_interfaces_ssh
+  - net_spine1_version
+  - net_leaf1_version
+  - net_all_spine_interfaces
+  - net_all_device_versions
+  - query_spine1
+  - query_all_devices
+
+---
+kind: tools
+name: show_filtered_spine1_interfaces_netconf
+description: >-
+  Show all system information for all devices.  This tool demonstrates how
+  the YANG schema enables recursive path resolution and metadata enrichment
+  for complex operations.
+type: network-show-interfaces
+source: nokia-yang-lab/spine-1/netconf
+transforms:
+  get_interfaces:
+    format: json
+    jq: ".[] | {name: .name}"

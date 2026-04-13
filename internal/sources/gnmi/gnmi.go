@@ -73,6 +73,7 @@ type Config struct {
 	Timeout  string `yaml:"timeout"`
 	Vendor   string `yaml:"vendor"`
 	Platform string `yaml:"platform"`
+	Version  string `yaml:"version"`
 
 	// TLS configuration.
 	TLSInsecure bool   `yaml:"tls_insecure"`
@@ -201,6 +202,10 @@ func (s *Source) DeviceVendor() string {
 // DevicePlatform returns the configured platform for profile resolution.
 func (s *Source) DevicePlatform() string {
 	return s.Platform
+}
+
+func (s *Source) DeviceVersion() string {
+	return s.Version
 }
 
 // Capabilities reports that this gNMI source supports gNMI Get RPCs.

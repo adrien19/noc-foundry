@@ -74,3 +74,4 @@ noc-foundry-validation-runs.sqlite
 noc-foundry-validation-runs.sqlite-*
 noc-foundry-validation-taskhub.sqlite
 noc-foundry-validation-taskhub.sqlite-*
+/yang-models/

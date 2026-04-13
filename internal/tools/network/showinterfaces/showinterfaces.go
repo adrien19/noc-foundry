@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package nokiashowversion implements the nokia-show-version MCP tool,
-// which retrieves system version information from a Nokia device.
-package nokiashowversion
+// Package showinterfaces implements the network-show-interfaces MCP tool,
+// a vendor-agnostic tool that retrieves interface status and counters from
+// any device that has a registered profile. It delegates to the query
+// executor which routes through the best available protocol and uses the
+// schema-driven canonical mapper for normalization.
+package showinterfaces
 
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/http"
 	"strings"
 
@@ -35,7 +37,7 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-const kind = "nokia-show-version"
+const kind = "network-show-interfaces"
 
 func init() {
 	if !tools.Register(kind, newConfig) {
@@ -51,48 +53,34 @@ func newConfig(ctx context.Context, name string, decoder *yaml.Decoder) (tools.T
 	return actual, nil
 }
 
-// Config holds the YAML-decoded configuration for the Nokia show version tool.
+// Config holds the YAML-decoded configuration for the network show interfaces tool.
 type Config struct {
-	Name           string                 `yaml:"name" validate:"required"`
-	Type           string                 `yaml:"type" validate:"required"`
-	Source         string                 `yaml:"source,omitempty"`
-	SourceSelector *SourceSelector        `yaml:"sourceSelector,omitempty"`
-	Description    string                 `yaml:"description"`
-	AuthRequired   []string               `yaml:"authRequired"`
-	Annotations    *tools.ToolAnnotations `yaml:"annotations"`
-	// Transforms holds optional per-operation jq expressions that override
-	// the built-in CLI parser for that operation on this tool instance.
-	// Keys are operation IDs (e.g. "get_system_version"); values are jq specs.
-	//
-	// Example:
-	//   transforms:
-	//     get_system_version:
-	//       jq: "{hostname: .hostname, version: .\"software-version\"}"
-	Transforms map[string]query.TransformSpec `yaml:"transforms,omitempty"`
+	Name           string                         `yaml:"name" validate:"required"`
+	Type           string                         `yaml:"type" validate:"required"`
+	Source         string                         `yaml:"source,omitempty"`
+	SourceSelector *SourceSelector                `yaml:"sourceSelector,omitempty"`
+	Parameters     parameters.Parameters          `yaml:"parameters,omitempty"`
+	Description    string                         `yaml:"description"`
+	AuthRequired   []string                       `yaml:"authRequired"`
+	Annotations    *tools.ToolAnnotations         `yaml:"annotations"`
+	Transforms     map[string]query.TransformSpec `yaml:"transforms,omitempty"`
 }
 
 // SourceSelector defines label-based device targeting for fleet operations.
 type SourceSelector struct {
 	MatchLabels    map[string]string `yaml:"matchLabels"`
 	MaxConcurrency int               `yaml:"maxConcurrency,omitempty"`
-	// Template filters sources to a specific source-template name (e.g. "ssh",
-	// "gnmi", "netconf"). When set, only the devices that have a source with
-	// this template name are queried. Devices that lack the template are
-	// silently skipped — they do not produce an error.
-	Template string `yaml:"template,omitempty"`
+	Template       string            `yaml:"template,omitempty"`
 }
 
-// validate interface
 var _ tools.ToolConfig = Config{}
 
 func (cfg Config) ToolConfigType() string {
 	return kind
 }
 
-// compatibleSource requires SourceIdentity for query executor profile resolution.
 type compatibleSource = capabilities.SourceIdentity
 
-// Initialize creates a new Tool instance.
 func (cfg Config) Initialize(srcs map[string]sources.Source) (tools.Tool, error) {
 	if cfg.Source == "" && cfg.SourceSelector == nil {
 		return nil, fmt.Errorf("tool %q must specify either 'source' or 'sourceSelector'", cfg.Name)
@@ -101,9 +89,6 @@ func (cfg Config) Initialize(srcs map[string]sources.Source) (tools.Tool, error)
 		return nil, fmt.Errorf("tool %q cannot specify both 'source' and 'sourceSelector'", cfg.Name)
 	}
 
-	// For single-source mode, validate compatibility if the source is
-	// in the eagerly-initialized map. Device pool sources won't be here;
-	// they are resolved lazily at invocation time via ResourceManager.
 	if cfg.Source != "" {
 		if rawS, ok := srcs[cfg.Source]; ok {
 			if _, ok := rawS.(compatibleSource); !ok {
@@ -115,17 +100,15 @@ func (cfg Config) Initialize(srcs map[string]sources.Source) (tools.Tool, error)
 	desc := cfg.Description
 	if desc == "" {
 		if cfg.SourceSelector != nil {
-			desc = "Show system version and hardware information on Nokia devices matching a label selector. Pass 'device' to target a specific device, or omit to query all matching devices."
+			desc = "Show interface status and counters on network devices matching a label selector. Pass 'device' to target a specific device, or omit to query all matching devices."
 		} else {
-			desc = "Show system version and hardware information on a Nokia device. Returns canonical system version data via the best available protocol."
+			desc = "Show interface status and counters on a network device. Returns canonical interface data via the best available protocol (gNMI, NETCONF, or CLI)."
 		}
 	}
 
-	var allParameters parameters.Parameters
-	if cfg.SourceSelector != nil {
-		allParameters = parameters.Parameters{
-			parameters.NewStringParameterWithRequired("device", "Device name to query (e.g. 'spine-1'). Omit to query all matching devices.", false),
-		}
+	allParameters := cfg.Parameters
+	if allParameters == nil {
+		allParameters = parameters.Parameters{}
 	}
 
 	annotations := tools.GetAnnotationsOrDefault(cfg.Annotations, tools.NewReadOnlyAnnotations)
@@ -145,7 +128,7 @@ func (cfg Config) Initialize(srcs map[string]sources.Source) (tools.Tool, error)
 	}, nil
 }
 
-// Tool implements the Nokia show version operation.
+// Tool implements the vendor-agnostic show interfaces operation.
 type Tool struct {
 	Config
 
@@ -155,14 +138,10 @@ type Tool struct {
 	Parameters  parameters.Parameters
 }
 
-// Invoke executes the get_system_version operation.
 func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, params parameters.ParamValues, accessToken tools.AccessToken) (any, util.NOCFoundryError) {
-	// Single-source mode
 	if t.Source != "" {
 		return t.invokeSingle(ctx, resourceMgr, t.Source)
 	}
-
-	// Selector mode
 	return t.invokeWithSelector(ctx, resourceMgr, params)
 }
 
@@ -172,9 +151,9 @@ func (t Tool) invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider
 		return nil, util.NewClientServerError("unable to retrieve source", http.StatusInternalServerError, fmt.Errorf("source %q not found", sourceName))
 	}
 
-	record, err := t.executor.Execute(ctx, rawSource, profiles.OpGetSystemVersion, sourceName)
+	record, err := t.executor.Execute(ctx, rawSource, profiles.OpGetInterfaces, sourceName)
 	if err != nil {
-		return nil, util.NewClientServerError("failed to execute get_system_version operation", http.StatusInternalServerError, err)
+		return nil, util.NewClientServerError("failed to execute get_interfaces operation", http.StatusInternalServerError, err)
 	}
 	return record, nil
 }
@@ -194,7 +173,9 @@ func (t Tool) invokeWithSelector(ctx context.Context, resourceMgr tools.SourcePr
 	matchLabels := sel.MatchLabels
 	if sel.Template != "" {
 		merged := make(map[string]string, len(matchLabels)+1)
-		maps.Copy(merged, matchLabels)
+		for k, v := range matchLabels {
+			merged[k] = v
+		}
 		merged["template"] = sel.Template
 		matchLabels = merged
 	}
@@ -207,9 +188,6 @@ func (t Tool) invokeWithSelector(ctx context.Context, resourceMgr tools.SourcePr
 		return nil, util.NewClientServerError("no sources matched the selector", http.StatusNotFound, fmt.Errorf("sourceSelector matched 0 devices"))
 	}
 
-	// Deduplicate: keep the best-transport source per device so that a selector
-	// without an explicit template: filter does not query every transport for
-	// each device. Priority: gnmi > netconf > ssh > other.
 	srcs = pickBestPerDevice(srcs)
 
 	if deviceName != "" {
@@ -241,7 +219,7 @@ func (t Tool) invokeWithSelector(ctx context.Context, resourceMgr tools.SourcePr
 		if !ok {
 			return nil, fmt.Errorf("source %q not found", sourceName)
 		}
-		return t.executor.Execute(ctx, rawSource, profiles.OpGetSystemVersion, sourceName)
+		return t.executor.Execute(ctx, rawSource, profiles.OpGetInterfaces, sourceName)
 	})
 
 	return result, nil
@@ -271,10 +249,6 @@ func extractDevice(sourceName string) string {
 	return sourceName
 }
 
-// pickBestPerDevice deduplicates a source map so there is at most one source
-// per device. When multiple templates match the same device, the source with
-// the highest-priority transport is kept (gnmi > netconf > ssh > other).
-// Ties are broken alphabetically by source name for deterministic results.
 func pickBestPerDevice(srcs map[string]sources.Source) map[string]sources.Source {
 	type candidate struct {
 		name string
@@ -295,8 +269,6 @@ func pickBestPerDevice(srcs map[string]sources.Source) map[string]sources.Source
 	return result
 }
 
-// transportPriority returns a lower number for preferred transports.
-// netconf=0, gnmi=1, ssh=2, other=3.
 func transportPriority(sourceName string) int {
 	idx := strings.LastIndex(sourceName, "/")
 	template := sourceName

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package nokiashow implements the nokia-show MCP tool, which executes
-// read-only CLI commands on a Nokia device and returns the raw or
+// Package networkshow implements the network-show MCP tool, which executes
+// read-only CLI commands on a network device and returns the raw or
 // jq-transformed output.
 //
 // The tool operates in two modes depending on whether a static command
@@ -33,8 +33,8 @@
 //
 //	kind: tools
 //	name: show_any
-//	type: nokia-show
-//	source: nokia-srlinux-lab/spine-1/ssh
+//	type: network-show
+//	source: my-lab/spine-1/ssh
 //
 // # Predefined-command mode (`command:` set in YAML)
 //
@@ -50,8 +50,8 @@
 //
 //	kind: tools
 //	name: show_interface_detail
-//	type: nokia-show
-//	source: nokia-srlinux-lab/spine-1/ssh
+//	type: network-show
+//	source: my-lab/spine-1/ssh
 //	description: Show full details for a single interface
 //	command: "show interface {interface} detail"
 //	parameters:
@@ -62,7 +62,7 @@
 //	  run_command:
 //	    format: json
 //	    jq: '{name: .name, oper: ."oper-state"}'
-package nokiashow
+package networkshow
 
 import (
 	"context"
@@ -82,13 +82,13 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-const kind = "nokia-show"
+const kind = "network-show"
 
 // placeholderRe matches {paramName} template placeholders.
 var placeholderRe = regexp.MustCompile(`\{([a-zA-Z][a-zA-Z0-9_]*)\}`)
 
 // safeParamValueRe is the allowlist for values interpolated into command
-// templates. Only characters safe in Nokia device CLI contexts are permitted;
+// templates. Only characters safe in device CLI contexts are permitted;
 // shell metacharacters, semicolons, and pipes are explicitly excluded to
 // prevent command injection on the target device.
 var safeParamValueRe = regexp.MustCompile(`^[a-zA-Z0-9/_\-.:@ ]+$`)
@@ -121,7 +121,7 @@ func (p CommandParam) isRequired() bool {
 	return p.Required == nil || *p.Required
 }
 
-// Config holds the YAML-decoded configuration for the Nokia show tool.
+// Config holds the YAML-decoded configuration for the network show tool.
 type Config struct {
 	Name           string                 `yaml:"name" validate:"required"`
 	Type           string                 `yaml:"type" validate:"required"`
@@ -221,17 +221,17 @@ func (cfg Config) Initialize(srcs map[string]sources.Source) (tools.Tool, error)
 	if desc == "" {
 		if cfg.Command != "" {
 			if cfg.SourceSelector != nil {
-				desc = fmt.Sprintf("Run '%s' on Nokia devices matching a label selector. Pass 'device' to target a specific device.", cfg.Command)
+				desc = fmt.Sprintf("Run '%s' on network devices matching a label selector. Pass 'device' to target a specific device.", cfg.Command)
 			} else {
-				desc = fmt.Sprintf("Run '%s' on a Nokia device and return the output.", cfg.Command)
+				desc = fmt.Sprintf("Run '%s' on a network device and return the output.", cfg.Command)
 			}
 		} else {
 			if cfg.SourceSelector != nil {
-				desc = "Run a read-only CLI command on Nokia devices matching a label selector. " +
+				desc = "Run a read-only CLI command on network devices matching a label selector. " +
 					"Pass 'device' to target a specific device, or omit to run on all matching devices. " +
 					"Pass 'jq' with a jq expression to transform the output."
 			} else {
-				desc = "Run a read-only CLI command on a Nokia device and return the output. " +
+				desc = "Run a read-only CLI command on a network device and return the output. " +
 					"Pass 'jq' with a jq expression to transform the output."
 			}
 		}
@@ -299,7 +299,7 @@ func buildParameters(cfg Config) parameters.Parameters {
 	return params
 }
 
-// Tool implements the generic Nokia CLI command runner.
+// Tool implements the vendor-agnostic CLI command runner.
 type Tool struct {
 	Config
 
@@ -475,7 +475,7 @@ func expandCommandTemplate(tmpl string, vals map[string]string) (string, error) 
 }
 
 // sanitizeParamValue validates that value contains only characters safe for
-// injection into a Nokia device CLI command. Returns an error if any forbidden
+// injection into a device CLI command. Returns an error if any forbidden
 // character is detected.
 func sanitizeParamValue(name, value string) (string, error) {
 	if !safeParamValueRe.MatchString(value) {
@@ -603,8 +603,8 @@ func (t Tool) GetParameters() parameters.Parameters {
 }
 
 //
-// Unlike the operation-specific tools (nokia-show-interfaces,
-// nokia-show-version), this tool does not route through the profile/operation
+// Unlike the operation-specific tools (network-show-interfaces,
+// network-show-version), this tool does not route through the profile/operation
 // system. It is intended for ad-hoc queries that do not have a dedicated
 // operation — for example, show route tables, EVPN routes, BGP summaries,
 // or any vendor-specific diagnostic output.

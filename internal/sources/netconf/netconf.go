@@ -80,6 +80,7 @@ type Config struct {
 	Timeout          string `yaml:"timeout"`
 	Vendor           string `yaml:"vendor"`
 	Platform         string `yaml:"platform"`
+	Version          string `yaml:"version"`
 	// KnownHostsFile is the path to a known_hosts file for SSH host key verification.
 	// When set, the server's host key is verified against this file (strict checking).
 	// When empty, host key verification is skipped — insecure, suitable for lab use only.
@@ -188,6 +189,10 @@ func (s *Source) DeviceVendor() string {
 // DevicePlatform returns the configured platform for profile resolution.
 func (s *Source) DevicePlatform() string {
 	return s.Platform
+}
+
+func (s *Source) DeviceVersion() string {
+	return s.Version
 }
 
 // Capabilities reports that this NETCONF source supports NETCONF RPCs.

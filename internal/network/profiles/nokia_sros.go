@@ -14,6 +14,9 @@
 
 package profiles
 
+// Nokia SR OS hardcoded profile. Contains only CLI paths; gNMI and
+// NETCONF paths are generated from compiled YANG schemas at startup by
+// schemas.BuildAndRegisterProfiles and merged via MergeProfiles.
 func init() {
 	Register(&Profile{
 		Vendor:   "nokia",
@@ -22,22 +25,6 @@ func init() {
 			OpGetInterfaces: {
 				OperationID: OpGetInterfaces,
 				Paths: []ProtocolPath{
-					{
-						Protocol: ProtocolGnmiOpenConfig,
-						Paths:    []string{"/openconfig-interfaces:interfaces/interface"},
-					},
-					{
-						Protocol: ProtocolGnmiNative,
-						Paths:    []string{"/nokia-state:state/router[router-name=Base]/interface"},
-					},
-					{
-						Protocol: ProtocolNetconfOpenConfig,
-						Filter:   `<interfaces xmlns="http://openconfig.net/yang/interfaces"/>`,
-					},
-					{
-						Protocol: ProtocolNetconfNative,
-						Filter:   `<state xmlns="urn:nokia.com:sros:ns:yang:sr:state"><router><router-name>Base</router-name><interface/></router></state>`,
-					},
 					// JSON CLI path requires SROS 20.x+ with MD-CLI enabled.
 					// Falls back to text table format on older releases.
 					{
@@ -56,25 +43,6 @@ func init() {
 			OpGetSystemVersion: {
 				OperationID: OpGetSystemVersion,
 				Paths: []ProtocolPath{
-					{
-						Protocol: ProtocolGnmiOpenConfig,
-						Paths: []string{
-							"/openconfig-system:system/state",
-							"/openconfig-platform:components/component[name=chassis]/state",
-						},
-					},
-					{
-						Protocol: ProtocolGnmiNative,
-						Paths:    []string{"/nokia-state:state/system/information"},
-					},
-					{
-						Protocol: ProtocolNetconfOpenConfig,
-						Filter:   `<system xmlns="http://openconfig.net/yang/system"/><components xmlns="http://openconfig.net/yang/platform"/>`,
-					},
-					{
-						Protocol: ProtocolNetconfNative,
-						Filter:   `<state xmlns="urn:nokia.com:sros:ns:yang:sr:state"><system><information/></system></state>`,
-					},
 					{
 						Protocol:  ProtocolCLI,
 						Command:   "show system information",

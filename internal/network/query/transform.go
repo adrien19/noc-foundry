@@ -132,6 +132,46 @@ func applyJQTransform(_ context.Context, spec TransformSpec, raw string, format 
 		}
 	}
 
+	return runJQ(query, input)
+}
+
+// applyPayloadTransform runs a jq expression against an already-parsed
+// payload (from gNMI or NETCONF normalization). The payload is marshalled
+// to JSON, fed through the jq expression, and the result replaces the
+// original payload.
+//
+// This enables the same user-configured jq transforms that work on CLI
+// output to also filter/reshape gNMI and NETCONF responses.
+func applyPayloadTransform(_ context.Context, spec TransformSpec, payload any) (any, error) {
+	if spec.JQ == "" {
+		return nil, fmt.Errorf("empty jq expression in transform spec")
+	}
+
+	query, err := gojq.Parse(spec.JQ)
+	if err != nil {
+		return nil, fmt.Errorf("invalid jq expression %q: %w", spec.JQ, err)
+	}
+
+	// Marshal the structured payload to JSON then unmarshal into a generic
+	// any so gojq can traverse it. This round-trip normalises Go types
+	// (e.g. []models.InterfaceState) into map/slice/string/float64 that
+	// gojq understands.
+	raw, merr := json.Marshal(payload)
+	if merr != nil {
+		return nil, fmt.Errorf("cannot marshal payload for jq transform: %w", merr)
+	}
+	var input any
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return nil, fmt.Errorf("cannot unmarshal payload for jq transform: %w", err)
+	}
+
+	return runJQ(query, input)
+}
+
+// runJQ executes a compiled jq query against an input value and collects
+// results. Returns a single value for one result, []any for multiple,
+// or nil for no results.
+func runJQ(query *gojq.Query, input any) (any, error) {
 	iter := query.Run(input)
 	var results []any
 	for {

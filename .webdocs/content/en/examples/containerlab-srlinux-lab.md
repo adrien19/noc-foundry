@@ -71,6 +71,23 @@ environment variables when you start NOCFoundry.
 sudo containerlab destroy -t examples/containerlab/noc-foundry-lab.clab.yaml
 ```
 
+## Using with YANG schemas
+
+To test YANG-schema-enhanced tools against this lab, clone the
+[Nokia SR Linux YANG models](https://github.com/nokia/srlinux-yang-models) and
+start NOCFoundry with `--schema-dir`:
+
+```bash
+./nocfoundry \
+  --tools-file examples/tools-configs/nokia-srlinux-yang-schema.yaml \
+  --schema-dir yang-models
+```
+
+This enables schema-derived gNMI and NETCONF paths for `network-show-interfaces`,
+`network-show-version`, and `network-query` tools. See
+[YANG schemas]({{< relref "../configuration/yang-schemas.md" >}}) for the
+required directory layout.
+
 ## When to use this lab
 
 Use this topology when you want to test:
@@ -78,4 +95,5 @@ Use this topology when you want to test:
 - multi-node reachability and path diversity
 - SR Linux source connectivity
 - NETCONF and OpenConfig/gRPC access against multiple nodes
+- YANG-schema-aware protocol routing with native YANG models
 - validation runs against a more realistic network fabric

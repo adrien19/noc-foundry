@@ -204,7 +204,7 @@ func TestGenerateSkillMarkdown(t *testing.T) {
 					params: parameters.Parameters{
 						parameters.NewStringParameter("site", "Target site."),
 					},
-					config:      fakeToolConfig{resourceType: "nokia-show-interfaces"},
+					config:      fakeToolConfig{resourceType: "network-show-interfaces"},
 					annotations: readOnly,
 				},
 			},
@@ -257,7 +257,7 @@ func TestGenerateSkillManifest(t *testing.T) {
 				Tool: fakeTool{
 					name:        "show_fleet_interfaces",
 					description: "Inspect fleet interfaces.",
-					config:      fakeToolConfig{resourceType: "nokia-show-interfaces"},
+					config:      fakeToolConfig{resourceType: "network-show-interfaces"},
 					annotations: tools.NewReadOnlyAnnotations(),
 				},
 			},

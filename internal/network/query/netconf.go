@@ -25,6 +25,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/network/capabilities"
 	"github.com/adrien19/noc-foundry/internal/network/models"
 	"github.com/adrien19/noc-foundry/internal/network/profiles"
+	"github.com/adrien19/noc-foundry/internal/network/schemas"
 	"github.com/adrien19/noc-foundry/internal/sources"
 )
 
@@ -166,7 +167,7 @@ type xmlNCSROSSystemState struct {
 // and returns a canonical Record. UseGetConfig selects <get-config> (config
 // data only); the default <get> retrieves both configuration and state data,
 // which is required for operational metrics such as admin/oper status.
-func executeNetconf(ctx context.Context, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string, collectedAt time.Time) (*models.Record, error) {
+func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string, collectedAt time.Time) (*models.Record, error) {
 	querier, ok := source.(capabilities.NetconfQuerier)
 	if !ok {
 		return nil, fmt.Errorf("source %q does not implement NetconfQuerier", sourceID)
@@ -194,9 +195,21 @@ func executeNetconf(ctx context.Context, source sources.Source, pp profiles.Prot
 		protocol = models.ProtocolNetconfNative
 	}
 
-	payload, quality, err := normalizeNetconfResponse(rawXML, pp.Protocol, operationID, vendor, platform)
+	payload, quality, err := normalizeNetconfResponse(rawXML, pp.Protocol, operationID, vendor, platform, e.SchemaStore)
 	if err != nil {
 		return nil, err
+	}
+
+	// Apply user-defined jq transform to the normalized payload when configured.
+	if e != nil && len(e.Transforms) > 0 {
+		if spec, ok := e.Transforms[operationID]; ok && spec.JQ != "" {
+			transformed, terr := applyPayloadTransform(ctx, spec, payload)
+			if terr != nil {
+				return nil, fmt.Errorf("jq transform failed for NETCONF operation %q: %w", operationID, terr)
+			}
+			payload = transformed
+			quality = models.QualityMeta{MappingQuality: models.MappingDerived}
+		}
 	}
 
 	return &models.Record{
@@ -215,9 +228,7 @@ func executeNetconf(ctx context.Context, source sources.Source, pp profiles.Prot
 		},
 		Payload: payload,
 		Quality: quality,
-		Native: &models.NativeMeta{
-			NativePath: pp.Filter,
-		},
+		Native:  enrichNativeMeta(e, vendor, platform, nil, pp.Filter),
 	}, nil
 }
 
@@ -226,7 +237,15 @@ func executeNetconf(ctx context.Context, source sources.Source, pp profiles.Prot
 // ---------------------------------------------------------------------------
 
 // normalizeNetconfResponse dispatches XML normalization by operation ID.
-func normalizeNetconfResponse(rawXML []byte, protocol profiles.Protocol, operationID, vendor, platform string) (any, models.QualityMeta, error) {
+// When a SchemaStore is available, it tries schema-driven canonical mapping
+// first and falls back to the hardcoded per-vendor XML struct parsers.
+func normalizeNetconfResponse(rawXML []byte, protocol profiles.Protocol, operationID, vendor, platform string, schemaStore *schemas.SchemaStore) (any, models.QualityMeta, error) {
+	// Try schema-driven canonical mapping first.
+	if payload, quality, ok := trySchemaMapNetconf(rawXML, operationID, schemaStore, vendor, platform); ok {
+		return payload, quality, nil
+	}
+
+	// Fall back to hardcoded per-vendor parsers.
 	switch operationID {
 	case profiles.OpGetInterfaces:
 		return parseNetconfInterfaces(rawXML, protocol, vendor, platform)
@@ -238,6 +257,35 @@ func normalizeNetconfResponse(rawXML []byte, protocol profiles.Protocol, operati
 			Warnings:       []string{"no canonical NETCONF parser for operation " + operationID},
 		}, nil
 	}
+}
+
+// trySchemaMapNetconf attempts schema-driven mapping of raw NETCONF XML.
+// Returns (payload, quality, true) on success, or (nil, _, false) when
+// the mapper is unavailable or produces empty results.
+func trySchemaMapNetconf(rawXML []byte, operationID string, schemaStore *schemas.SchemaStore, vendor, platform string) (any, models.QualityMeta, bool) {
+	var bundle *schemas.SchemaBundle
+	if schemaStore != nil {
+		b, ok := schemaStore.LookupBestMatch(vendor, platform, "")
+		if ok {
+			bundle = b
+		}
+	}
+
+	mapper, err := schemas.NewSchemaMapper(bundle, operationID)
+	if err != nil {
+		return nil, models.QualityMeta{}, false
+	}
+
+	payload, quality, merr := mapper.MapXML(rawXML)
+	if merr != nil {
+		return nil, models.QualityMeta{}, false
+	}
+
+	if isEmptyMappingResult(payload) {
+		return nil, models.QualityMeta{}, false
+	}
+
+	return payload, quality, true
 }
 
 // parseNetconfInterfaces dispatches to the appropriate interface parser.

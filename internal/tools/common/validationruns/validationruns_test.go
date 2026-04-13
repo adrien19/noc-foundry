@@ -23,8 +23,8 @@ import (
 	"github.com/adrien19/noc-foundry/internal/server/resources"
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/tools"
-	common "github.com/adrien19/noc-foundry/internal/tools/common/validationruns"
 	validate "github.com/adrien19/noc-foundry/internal/tools/common/validate"
+	common "github.com/adrien19/noc-foundry/internal/tools/common/validationruns"
 	"github.com/adrien19/noc-foundry/internal/util/parameters"
 	"github.com/adrien19/noc-foundry/internal/validationruns"
 )
@@ -49,6 +49,7 @@ func (m *mockSource) SourceType() string             { return "ssh" }
 func (m *mockSource) ToConfig() sources.SourceConfig { return nil }
 func (m *mockSource) DeviceVendor() string           { return "nokia" }
 func (m *mockSource) DevicePlatform() string         { return "srlinux" }
+func (m *mockSource) DeviceVersion() string          { return "" }
 func (m *mockSource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{CLI: true}
 }

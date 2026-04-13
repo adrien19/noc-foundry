@@ -25,8 +25,8 @@ func TestNewToolResult(t *testing.T) {
 	cr := models.CommandResult{
 		RawOutput: "some output",
 		Command:   "show interface",
-		ToolKind:  "nokia-show-interfaces",
-		Source:    "my-nokia",
+		ToolKind:  "network-show-interfaces",
+		Source:    "my-device",
 	}
 
 	result := output.NewToolResult(cr)
@@ -43,10 +43,10 @@ func TestNewToolResult(t *testing.T) {
 	if meta["command"] != "show interface" {
 		t.Errorf("command = %q, want %q", meta["command"], "show interface")
 	}
-	if meta["tool"] != "nokia-show-interfaces" {
-		t.Errorf("tool = %q, want %q", meta["tool"], "nokia-show-interfaces")
+	if meta["tool"] != "network-show-interfaces" {
+		t.Errorf("tool = %q, want %q", meta["tool"], "network-show-interfaces")
 	}
-	if meta["source"] != "my-nokia" {
-		t.Errorf("source = %q, want %q", meta["source"], "my-nokia")
+	if meta["source"] != "my-device" {
+		t.Errorf("source = %q, want %q", meta["source"], "my-device")
 	}
 }

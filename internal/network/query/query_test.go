@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/adrien19/noc-foundry/internal/network/capabilities"
@@ -26,6 +27,40 @@ import (
 	"github.com/adrien19/noc-foundry/internal/network/query"
 	"github.com/adrien19/noc-foundry/internal/sources"
 )
+
+// TestMain registers test profiles that include gNMI/NETCONF paths.
+// In production, these paths come from compiled YANG schemas; for unit
+// tests we register a full profile directly.
+func TestMain(m *testing.M) {
+	profiles.RegisterOrReplace(&profiles.Profile{
+		Vendor:   "nokia",
+		Platform: "srlinux",
+		Operations: map[string]profiles.OperationDescriptor{
+			profiles.OpGetInterfaces: {
+				OperationID: profiles.OpGetInterfaces,
+				Paths: []profiles.ProtocolPath{
+					{Protocol: profiles.ProtocolGnmiOpenConfig, Paths: []string{"/openconfig-interfaces:interfaces/interface"}},
+					{Protocol: profiles.ProtocolGnmiNative, Paths: []string{"/srl_nokia-interfaces:interface"}},
+					{Protocol: profiles.ProtocolNetconfOpenConfig, Filter: `<interfaces xmlns="http://openconfig.net/yang/interfaces"/>`},
+					{Protocol: profiles.ProtocolNetconfNative, Filter: `<interface xmlns="urn:nokia.com:srlinux:chassis:interfaces"/>`},
+					{Protocol: profiles.ProtocolCLI, Command: "show interface", Format: "json", FormatArg: "| as json"},
+					{Protocol: profiles.ProtocolCLI, Command: "show interface", Format: "text"},
+				},
+			},
+			profiles.OpGetSystemVersion: {
+				OperationID: profiles.OpGetSystemVersion,
+				Paths: []profiles.ProtocolPath{
+					{Protocol: profiles.ProtocolGnmiOpenConfig, Paths: []string{"/openconfig-system:system/state"}},
+					{Protocol: profiles.ProtocolGnmiNative, Paths: []string{"/srl_nokia-system:system/information", "/srl_nokia-system:system/name"}},
+					{Protocol: profiles.ProtocolNetconfNative, Filter: `<system xmlns="urn:nokia.com:srlinux:general:system"><information xmlns="urn:nokia.com:srlinux:linux:system-info"/><name xmlns="urn:nokia.com:srlinux:chassis:system-name"/></system>`},
+					{Protocol: profiles.ProtocolCLI, Command: "show version", Format: "json", FormatArg: "| as json"},
+					{Protocol: profiles.ProtocolCLI, Command: "show version", Format: "text"},
+				},
+			},
+		},
+	})
+	os.Exit(m.Run())
+}
 
 // --- Mock sources ---
 
@@ -40,6 +75,7 @@ func (m *mockCLISource) SourceType() string             { return "mock-cli" }
 func (m *mockCLISource) ToConfig() sources.SourceConfig { return nil }
 func (m *mockCLISource) DeviceVendor() string           { return m.vendor }
 func (m *mockCLISource) DevicePlatform() string         { return m.platform }
+func (m *mockCLISource) DeviceVersion() string          { return "" }
 func (m *mockCLISource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{CLI: true}
 }
@@ -64,6 +100,7 @@ func (m *mockGnmiSource) SourceType() string             { return "mock-gnmi" }
 func (m *mockGnmiSource) ToConfig() sources.SourceConfig { return nil }
 func (m *mockGnmiSource) DeviceVendor() string           { return m.vendor }
 func (m *mockGnmiSource) DevicePlatform() string         { return m.platform }
+func (m *mockGnmiSource) DeviceVersion() string          { return "" }
 func (m *mockGnmiSource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{
 		GnmiSnapshot:    true,
@@ -93,6 +130,7 @@ func (m *mockDualSource) SourceType() string             { return "mock-dual" }
 func (m *mockDualSource) ToConfig() sources.SourceConfig { return nil }
 func (m *mockDualSource) DeviceVendor() string           { return m.vendor }
 func (m *mockDualSource) DevicePlatform() string         { return m.platform }
+func (m *mockDualSource) DeviceVersion() string          { return "" }
 func (m *mockDualSource) Capabilities() capabilities.SourceCapabilities {
 	return capabilities.SourceCapabilities{
 		GnmiSnapshot:    true,

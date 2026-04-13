@@ -99,8 +99,16 @@ If the custom tool catalog already defines the same validation-run lifecycle too
 - put `/api`, `/mcp`, and UI auth policy in `--server-config`
 - use `--prebuilt` for small generic operational bundles, and keep richer end-to-end workflows in `examples/`
 
+## YANG-enhanced catalogs
+
+Tool catalogs that use `network-show-interfaces`, `network-show-version`, or
+`network-query` tools can be enhanced with native YANG schemas by adding
+`--schema-dir` at startup. See [YANG schemas]({{< relref "yang-schemas.md" >}})
+for the directory layout and loading behavior.
+
 ## Reference examples
 
 - [`examples/tools-configs/keycloak-protected-validation.yaml`](https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/keycloak-protected-validation.yaml)
-- [`examples/tools-configs/nokia-srlinux-lab.yaml`](https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/nokia-srlinux-lab.yaml)
+- [`examples/tools-configs/nokia-srlinux-lab.yaml`](https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/nokia-srlinux-lab.yaml) — basic SR Linux lab tools
+- [`examples/tools-configs/nokia-srlinux-yang-schema.yaml`](https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/nokia-srlinux-yang-schema.yaml) — YANG-schema-enhanced SR Linux tools
 - [`examples/server-configs/protected-api-mcp-ui.yaml`](https://github.com/adrien19/noc-foundry/blob/main/examples/server-configs/protected-api-mcp-ui.yaml)
