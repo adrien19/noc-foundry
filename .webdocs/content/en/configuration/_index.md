@@ -17,6 +17,6 @@ NOCFoundry uses three main configuration layers:
 Start with:
 
 - [Tool catalogs]({{< relref "tool-catalogs.md" >}})
+- [YANG schemas]({{< relref "yang-schemas.md" >}})
 - [Server config]({{< relref "server-config.md" >}})
 - [Validation runtime]({{< relref "validation-runtime.md" >}})
-

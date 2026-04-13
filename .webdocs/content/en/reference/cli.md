@@ -55,4 +55,17 @@ You can merge a prebuilt with your own tool catalog in one startup command:
 
 This works only when the prebuilt and the custom catalog do not define conflicting resource names.
 
+## YANG schema loading
+
+The `--schema-dir` flag loads native YANG models for schema-aware protocol routing:
+
+```bash
+./nocfoundry \
+  --tools-file examples/tools-configs/nokia-srlinux-yang-schema.yaml \
+  --schema-dir yang-models
+```
+
+The directory must follow the `<vendor>/<platform>/<version>/` layout. See
+[YANG schemas]({{< relref "../configuration/yang-schemas.md" >}}) for details.
+
 This page should be expanded with generated flag reference as the CLI stabilizes.
