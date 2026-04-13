@@ -77,25 +77,25 @@ devices:
 ---
 kind: tools
 name: show_spine1_interfaces
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-srlinux-lab/spine-1/ssh
 
 ---
 kind: tools
 name: show_spine1_interfaces_gnmi
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-srlinux-lab/spine-1/gnmi
 
 ---
 kind: tools
 name: show_spine1_version
-type: nokia-show-version
+type: network-show-version
 source: nokia-srlinux-lab/spine-1/ssh
 
 ---
 kind: tools
 name: show_spine1_command
-type: nokia-show
+type: network-show
 source: nokia-srlinux-lab/spine-1/ssh
 description: >-
   Run any read-only CLI command on spine-1 and optionally filter the result

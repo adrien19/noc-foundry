@@ -68,7 +68,7 @@ func (e *Executor) WithTransforms(ts TransformSet) *Executor {
 }
 
 // OpRunCommand is the TransformSet key used by ExecuteCommand.
-// When configuring a nokia-show tool with a jq transform, use this key:
+// When configuring a network-show tool with a jq transform, use this key:
 //
 //	transforms:
 //	  run_command:

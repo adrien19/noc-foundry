@@ -108,7 +108,7 @@ devices:
 # hardcoded defaults, so they stay correct across SR Linux releases.
 kind: tools
 name: show_spine1_interfaces_gnmi
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-yang-lab/spine-1/gnmi
 
 ---
@@ -116,27 +116,27 @@ source: nokia-yang-lab/spine-1/gnmi
 # correct NETCONF filter and namespace automatically.
 kind: tools
 name: show_spine1_interfaces_netconf
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-yang-lab/spine-1/netconf
 
 ---
 # SSH fallback — CLI paths are merged from the hardcoded profile.
 kind: tools
 name: show_spine1_interfaces_ssh
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-yang-lab/spine-1/ssh
 
 ---
 kind: tools
 name: show_spine1_version
-type: nokia-show-version
+type: network-show-version
 source: nokia-yang-lab/spine-1/ssh
 
 ---
 # Generic CLI show for ad-hoc exploration.
 kind: tools
 name: show_spine1_command
-type: nokia-show
+type: network-show
 source: nokia-yang-lab/spine-1/ssh
 description: >-
   Run any read-only CLI command on spine-1 and optionally filter the result
@@ -145,13 +145,13 @@ description: >-
 ---
 kind: tools
 name: show_leaf1_interfaces_gnmi
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-yang-lab/leaf-1/gnmi
 
 ---
 kind: tools
 name: show_leaf1_version
-type: nokia-show-version
+type: network-show-version
 source: nokia-yang-lab/leaf-1/ssh
 
 ---
@@ -172,21 +172,18 @@ tools:
 
 
 # ============================================================================
-# Vendor-Agnostic Tools (network-show-interfaces, network-show-version,
-# network-query)
+# Additional Vendor-Agnostic Tools (alternative naming examples)
 #
-# These tools use the generic `network-*` tool types instead of the Nokia-
-# specific `nokia-show-*` types.  The executor automatically detects the
-# device's vendor and platform from the source and routes through the
-# correct profile — no vendor prefix required in the tool type.
+# These tools demonstrate alternative naming conventions using the same
+# vendor-agnostic `network-*` tool types.  The executor automatically
+# detects the device's vendor and platform from the source and routes
+# through the correct profile.
 # ============================================================================
 
 # --- Single-source vendor-agnostic interface inspection ---
 
 ---
-# Vendor-agnostic gNMI interface query — identical behaviour to the Nokia-
-# specific variant above, but works with any vendor that has a registered
-# profile.
+# Vendor-agnostic gNMI interface query with alternative naming convention.
 kind: tools
 name: net_spine1_interfaces_gnmi
 type: network-show-interfaces
@@ -296,7 +293,7 @@ description: >-
   Show all system information for all devices.  This tool demonstrates how
   the YANG schema enables recursive path resolution and metadata enrichment
   for complex operations.
-type: nokia-show-interfaces
+type: network-show-interfaces
 source: nokia-yang-lab/spine-1/netconf
 transforms:
   get_interfaces:

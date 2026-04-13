@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nokiashow_test
+package networkshow_test
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/testutils"
 	"github.com/adrien19/noc-foundry/internal/tools"
-	nokia "github.com/adrien19/noc-foundry/internal/tools/nokia/nokiashow"
+	netshow "github.com/adrien19/noc-foundry/internal/tools/network/show"
 	"github.com/adrien19/noc-foundry/internal/util/parameters"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -94,7 +94,7 @@ func (m *mockSourceProvider) GetDevicePoolLabels() map[string]map[string]string 
 // YAML parse tests
 // ---------------------------------------------------------------------------
 
-func TestParseFromYamlNokiaShow(t *testing.T) {
+func TestParseFromYamlNetworkShow(t *testing.T) {
 	tcs := []struct {
 		desc string
 		in   string
@@ -105,14 +105,14 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 			in: `
 			kind: tools
 			name: run_show
-			type: nokia-show
-			source: my-nokia
+			type: network-show
+			source: my-device
 			`,
 			want: map[string]tools.ToolConfig{
-				"run_show": nokia.Config{
+				"run_show": netshow.Config{
 					Name:         "run_show",
-					Type:         "nokia-show",
-					Source:       "my-nokia",
+					Type:         "network-show",
+					Source:       "my-device",
 					AuthRequired: []string{},
 				},
 			},
@@ -122,17 +122,17 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 			in: `
 			kind: tools
 			name: run_show
-			type: nokia-show
-			source: my-nokia
+			type: network-show
+			source: my-device
 			description: Run any read-only show command
 			authRequired:
 				- network-admin
 			`,
 			want: map[string]tools.ToolConfig{
-				"run_show": nokia.Config{
+				"run_show": netshow.Config{
 					Name:         "run_show",
-					Type:         "nokia-show",
-					Source:       "my-nokia",
+					Type:         "network-show",
+					Source:       "my-device",
 					Description:  "Run any read-only show command",
 					AuthRequired: []string{"network-admin"},
 				},
@@ -143,18 +143,18 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 			in: `
 			kind: tools
 			name: run_show
-			type: nokia-show
-			source: my-nokia
+			type: network-show
+			source: my-device
 			transforms:
 				run_command:
 					format: json
 					jq: '.some | .path'
 			`,
 			want: map[string]tools.ToolConfig{
-				"run_show": nokia.Config{
+				"run_show": netshow.Config{
 					Name:   "run_show",
-					Type:   "nokia-show",
-					Source: "my-nokia",
+					Type:   "network-show",
+					Source: "my-device",
 					Transforms: map[string]query.TransformSpec{
 						"run_command": {Format: "json", JQ: ".some | .path"},
 					},
@@ -167,8 +167,8 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 			in: `
 			kind: tools
 			name: show_iface
-			type: nokia-show
-			source: my-nokia
+			type: network-show
+			source: my-device
 			description: Show interface details
 			command: "show interface {interface} detail"
 			parameters:
@@ -177,13 +177,13 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 				  description: Interface name (e.g. "ethernet-1/1")
 			`,
 			want: map[string]tools.ToolConfig{
-				"show_iface": nokia.Config{
+				"show_iface": netshow.Config{
 					Name:        "show_iface",
-					Type:        "nokia-show",
-					Source:      "my-nokia",
+					Type:        "network-show",
+					Source:      "my-device",
 					Description: "Show interface details",
 					Command:     `show interface {interface} detail`,
-					ExtraParams: []nokia.CommandParam{
+					ExtraParams: []netshow.CommandParam{
 						{Name: "interface", Type: "string", Description: `Interface name (e.g. "ethernet-1/1")`},
 					},
 					AuthRequired: []string{},
@@ -195,8 +195,8 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 			in: `
 			kind: tools
 			name: show_iface
-			type: nokia-show
-			source: my-nokia
+			type: network-show
+			source: my-device
 			command: "show interface {interface} detail | as json"
 			parameters:
 				- name: interface
@@ -208,12 +208,12 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 					jq: '.name'
 			`,
 			want: map[string]tools.ToolConfig{
-				"show_iface": nokia.Config{
+				"show_iface": netshow.Config{
 					Name:    "show_iface",
-					Type:    "nokia-show",
-					Source:  "my-nokia",
+					Type:    "network-show",
+					Source:  "my-device",
 					Command: `show interface {interface} detail | as json`,
-					ExtraParams: []nokia.CommandParam{
+					ExtraParams: []netshow.CommandParam{
 						{Name: "interface", Type: "string", Description: "Interface name"},
 					},
 					Transforms: map[string]query.TransformSpec{
@@ -237,7 +237,7 @@ func TestParseFromYamlNokiaShow(t *testing.T) {
 	}
 }
 
-func TestFailParseFromYamlNokiaShow(t *testing.T) {
+func TestFailParseFromYamlNetworkShow(t *testing.T) {
 	tcs := []struct {
 		desc string
 		in   string
@@ -247,8 +247,8 @@ func TestFailParseFromYamlNokiaShow(t *testing.T) {
 			in: `
 			kind: tools
 			name: run_show
-			type: nokia-show
-			source: my-nokia
+			type: network-show
+			source: my-device
 			unknownField: value
 			`,
 		},
@@ -268,7 +268,7 @@ func TestFailParseFromYamlNokiaShow(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInitializeMissingSourceAndSelector(t *testing.T) {
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show"}
+	cfg := netshow.Config{Name: "run_show", Type: "network-show"}
 	_, err := cfg.Initialize(map[string]sources.Source{})
 	if err == nil {
 		t.Fatal("expected error when neither source nor sourceSelector is set")
@@ -276,11 +276,11 @@ func TestInitializeMissingSourceAndSelector(t *testing.T) {
 }
 
 func TestInitializeBothSourceAndSelector(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:           "run_show",
-		Type:           "nokia-show",
-		Source:         "my-nokia",
-		SourceSelector: &nokia.SourceSelector{MatchLabels: map[string]string{"role": "spine"}},
+		Type:           "network-show",
+		Source:         "my-device",
+		SourceSelector: &netshow.SourceSelector{MatchLabels: map[string]string{"role": "spine"}},
 	}
 	_, err := cfg.Initialize(map[string]sources.Source{})
 	if err == nil {
@@ -289,7 +289,7 @@ func TestInitializeBothSourceAndSelector(t *testing.T) {
 }
 
 func TestInitializeIncompatibleSource(t *testing.T) {
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "bad"}
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "bad"}
 	_, err := cfg.Initialize(map[string]sources.Source{"bad": &incompatibleSource{}})
 	if err == nil {
 		t.Fatal("expected error for source without CommandRunner")
@@ -299,7 +299,7 @@ func TestInitializeIncompatibleSource(t *testing.T) {
 func TestInitializeMissingSourceAccepted(t *testing.T) {
 	// Sources resolved lazily at invocation time (device pool) are not in the
 	// eager source map, so Initialize must accept them without error.
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "pool-source"}
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "pool-source"}
 	_, err := cfg.Initialize(map[string]sources.Source{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -311,15 +311,15 @@ func TestInitializeMissingSourceAccepted(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInvokeShowCommand_RawOutput(t *testing.T) {
-	rawOutput := "nokia-spine-1  SRLinux 24.3.1  uptime 3d 4h"
+	rawOutput := "spine-1  SRLinux 24.3.1  uptime 3d 4h"
 
 	ms := &mockSource{output: map[string]string{
 		"show version": rawOutput,
 	}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -357,17 +357,17 @@ func TestInvokeShowCommand_WithJQTransform(t *testing.T) {
 	ms := &mockSource{output: map[string]string{
 		"show version | json": jsonOutput,
 	}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:   "run_show",
-		Type:   "nokia-show",
-		Source: "my-nokia",
+		Type:   "network-show",
+		Source: "my-device",
 		Transforms: map[string]query.TransformSpec{
 			query.OpRunCommand: {Format: "json", JQ: `.hostname`},
 		},
 	}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -389,10 +389,10 @@ func TestInvokeShowCommand_WithJQTransform(t *testing.T) {
 
 func TestInvokeMissingCommandParam(t *testing.T) {
 	ms := &mockSource{output: map[string]string{}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -406,10 +406,10 @@ func TestInvokeMissingCommandParam(t *testing.T) {
 
 func TestInvokeDangerousCommandRejected(t *testing.T) {
 	ms := &mockSource{output: map[string]string{}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -423,10 +423,10 @@ func TestInvokeDangerousCommandRejected(t *testing.T) {
 
 func TestInvokeSourceError(t *testing.T) {
 	ms := &mockSource{err: fmt.Errorf("SSH connection lost")}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -441,7 +441,7 @@ func TestInvokeSourceError(t *testing.T) {
 func TestInvokeSourceNotFound(t *testing.T) {
 	provider := &mockSourceProvider{sources: map[string]sources.Source{}}
 
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "missing"}
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "missing"}
 	tool, err := cfg.Initialize(map[string]sources.Source{})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
@@ -460,8 +460,8 @@ func TestInvokeSourceNotFound(t *testing.T) {
 
 func TestMcpManifestHasCommandParam(t *testing.T) {
 	ms := &mockSource{output: map[string]string{}}
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -481,10 +481,10 @@ func TestMcpManifestHasCommandParam(t *testing.T) {
 }
 
 func TestSelectorManifestHasDeviceAndCommandParams(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:           "run_show",
-		Type:           "nokia-show",
-		SourceSelector: &nokia.SourceSelector{MatchLabels: map[string]string{"role": "spine"}},
+		Type:           "network-show",
+		SourceSelector: &netshow.SourceSelector{MatchLabels: map[string]string{"role": "spine"}},
 	}
 	tool, err := cfg.Initialize(map[string]sources.Source{})
 	if err != nil {
@@ -515,18 +515,18 @@ func TestInvokeShowCommand_RuntimeJQ(t *testing.T) {
 	ms := &mockSource{output: map[string]string{
 		"show version | json": jsonOutput,
 	}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
 	// Format hint: format: json, no static jq expression.
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:   "run_show",
-		Type:   "nokia-show",
-		Source: "my-nokia",
+		Type:   "network-show",
+		Source: "my-device",
 		Transforms: map[string]query.TransformSpec{
 			query.OpRunCommand: {Format: "json"},
 		},
 	}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -558,11 +558,11 @@ func TestInvokeShowCommand_RuntimeJQ_AutoDetect(t *testing.T) {
 	ms := &mockSource{output: map[string]string{
 		"show version | as json": jsonOutput,
 	}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
 	// No transforms block at all — auto-detect kicks in.
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -588,18 +588,18 @@ func TestInvokeShowCommand_RuntimeJQ_OverridesStaticTransform(t *testing.T) {
 	ms := &mockSource{output: map[string]string{
 		"show version | json": jsonOutput,
 	}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:   "run_show",
-		Type:   "nokia-show",
-		Source: "my-nokia",
+		Type:   "network-show",
+		Source: "my-device",
 		Transforms: map[string]query.TransformSpec{
 			// Static transform returns "version" field.
 			query.OpRunCommand: {Format: "json", JQ: ".version"},
 		},
 	}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -624,10 +624,10 @@ func TestInvokeShowCommand_NoJQ_UsesRawOutput(t *testing.T) {
 	// Without jq and without a static transform, payload is the raw string.
 	rawOutput := "spine-1  SRLinux 24.3.1"
 	ms := &mockSource{output: map[string]string{"show version": rawOutput}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{Name: "run_show", Type: "nokia-show", Source: "my-nokia"}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	cfg := netshow.Config{Name: "run_show", Type: "network-show", Source: "my-device"}
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -649,12 +649,12 @@ func TestInvokeShowCommand_NoJQ_UsesRawOutput(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInitialize_PredefinedCommand_ValidTemplate(t *testing.T) {
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:    "show_iface",
-		Type:    "nokia-show",
-		Source:  "my-nokia",
+		Type:    "network-show",
+		Source:  "my-device",
 		Command: "show interface {interface} detail",
-		ExtraParams: []nokia.CommandParam{
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 		},
 	}
@@ -666,12 +666,12 @@ func TestInitialize_PredefinedCommand_ValidTemplate(t *testing.T) {
 
 func TestInitialize_PredefinedCommand_UndeclaredPlaceholder(t *testing.T) {
 	// Template references {vrf} but no param named "vrf" is declared.
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:    "show_iface",
-		Type:    "nokia-show",
-		Source:  "my-nokia",
+		Type:    "network-show",
+		Source:  "my-device",
 		Command: "show interface {interface} vrf {vrf} detail",
-		ExtraParams: []nokia.CommandParam{
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 			// {vrf} is NOT declared
 		},
@@ -684,11 +684,11 @@ func TestInitialize_PredefinedCommand_UndeclaredPlaceholder(t *testing.T) {
 
 func TestInitialize_ExtraParamsWithoutCommand(t *testing.T) {
 	// ExtraParams only makes sense with Command.
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:   "bad",
-		Type:   "nokia-show",
-		Source: "my-nokia",
-		ExtraParams: []nokia.CommandParam{
+		Type:   "network-show",
+		Source: "my-device",
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 		},
 	}
@@ -705,18 +705,18 @@ func TestInvoke_PredefinedCommand_ExpandsTemplate(t *testing.T) {
 	ms := &mockSource{output: map[string]string{
 		expandedCmd: "ethernet-1/1 is up",
 	}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:    "show_iface",
-		Type:    "nokia-show",
-		Source:  "my-nokia",
+		Type:    "network-show",
+		Source:  "my-device",
 		Command: "show interface {interface} detail",
-		ExtraParams: []nokia.CommandParam{
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 		},
 	}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -736,12 +736,12 @@ func TestInvoke_PredefinedCommand_ExpandsTemplate(t *testing.T) {
 func TestInvoke_PredefinedCommand_NoCommandParamExposed(t *testing.T) {
 	// In predefined mode the "command" runtime parameter must NOT be present;
 	// only the declared ExtraParams + "jq" should appear.
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:    "show_iface",
-		Type:    "nokia-show",
-		Source:  "my-nokia",
+		Type:    "network-show",
+		Source:  "my-device",
 		Command: "show interface {interface} detail",
-		ExtraParams: []nokia.CommandParam{
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 		},
 	}
@@ -767,18 +767,18 @@ func TestInvoke_PredefinedCommand_NoCommandParamExposed(t *testing.T) {
 
 func TestInvoke_PredefinedCommand_MissingRequiredParam(t *testing.T) {
 	ms := &mockSource{output: map[string]string{}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:    "show_iface",
-		Type:    "nokia-show",
-		Source:  "my-nokia",
+		Type:    "network-show",
+		Source:  "my-device",
 		Command: "show interface {interface} detail",
-		ExtraParams: []nokia.CommandParam{
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 		},
 	}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -794,14 +794,14 @@ func TestInvoke_PredefinedCommand_WithRuntimeJQ(t *testing.T) {
 	expandedCmd := "show interface ethernet-1/1 detail | as json"
 	jsonOutput := `{"name":"ethernet-1/1","oper-state":"up"}`
 	ms := &mockSource{output: map[string]string{expandedCmd: jsonOutput}}
-	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+	provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-	cfg := nokia.Config{
+	cfg := netshow.Config{
 		Name:    "show_iface",
-		Type:    "nokia-show",
-		Source:  "my-nokia",
+		Type:    "network-show",
+		Source:  "my-device",
 		Command: "show interface {interface} detail | as json",
-		ExtraParams: []nokia.CommandParam{
+		ExtraParams: []netshow.CommandParam{
 			{Name: "interface", Description: "Interface name"},
 		},
 		Transforms: map[string]query.TransformSpec{
@@ -809,7 +809,7 @@ func TestInvoke_PredefinedCommand_WithRuntimeJQ(t *testing.T) {
 			query.OpRunCommand: {Format: "json"},
 		},
 	}
-	tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+	tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 	if err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
@@ -849,18 +849,18 @@ func TestInvoke_PredefinedCommand_SafeCharactersAllowed(t *testing.T) {
 		t.Run(val, func(t *testing.T) {
 			expandedCmd := "show interface " + val + " detail"
 			ms := &mockSource{output: map[string]string{expandedCmd: "output"}}
-			provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+			provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-			cfg := nokia.Config{
+			cfg := netshow.Config{
 				Name:    "show_iface",
-				Type:    "nokia-show",
-				Source:  "my-nokia",
+				Type:    "network-show",
+				Source:  "my-device",
 				Command: "show interface {interface} detail",
-				ExtraParams: []nokia.CommandParam{
+				ExtraParams: []netshow.CommandParam{
 					{Name: "interface", Description: "Interface name"},
 				},
 			}
-			tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+			tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 			if err != nil {
 				t.Fatalf("Initialize: %v", err)
 			}
@@ -892,18 +892,18 @@ func TestInvoke_PredefinedCommand_UnsafeCharactersRejected(t *testing.T) {
 	for _, val := range unsafeValues {
 		t.Run(val, func(t *testing.T) {
 			ms := &mockSource{output: map[string]string{}}
-			provider := &mockSourceProvider{sources: map[string]sources.Source{"my-nokia": ms}}
+			provider := &mockSourceProvider{sources: map[string]sources.Source{"my-device": ms}}
 
-			cfg := nokia.Config{
+			cfg := netshow.Config{
 				Name:    "show_iface",
-				Type:    "nokia-show",
-				Source:  "my-nokia",
+				Type:    "network-show",
+				Source:  "my-device",
 				Command: "show interface {interface} detail",
-				ExtraParams: []nokia.CommandParam{
+				ExtraParams: []netshow.CommandParam{
 					{Name: "interface", Description: "Interface name"},
 				},
 			}
-			tool, err := cfg.Initialize(map[string]sources.Source{"my-nokia": ms})
+			tool, err := cfg.Initialize(map[string]sources.Source{"my-device": ms})
 			if err != nil {
 				t.Fatalf("Initialize: %v", err)
 			}
