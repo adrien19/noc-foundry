@@ -96,4 +96,12 @@
 &lt;li>&lt;code>sqlite&lt;/code> provides persistence for status, results, and events&lt;/li>
 &lt;/ul>
 &lt;h2 id="recommended-local-lab-setup">Recommended local lab setup&lt;/h2>
-&lt;p>For the protected validation example, use:&lt;/p></description></item></channel></rss>
+&lt;p>For the protected validation example, use:&lt;/p></description></item><item><title>YANG Schemas</title><link>https://docs.nocfoundry.com/dev/configuration/yang-schemas/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/yang-schemas/</guid><description>&lt;h1 id="yang-schemas">YANG Schemas&lt;/h1>
+&lt;p>NOCFoundry can compile native YANG models at startup and use them to generate
+protocol-specific paths for gNMI and NETCONF operations. This replaces
+hardcoded path tables with schema-derived paths that stay accurate across
+vendor software versions.&lt;/p>
+&lt;h2 id="why-use-yang-schemas">Why use YANG schemas&lt;/h2>
+&lt;p>Without &lt;code>--schema-dir&lt;/code>, NOCFoundry uses hardcoded profiles that map operations
+to protocol paths. These profiles work for the specific software versions they
+were written for, but YANG paths can change between releases.&lt;/p></description></item></channel></rss>

@@ -127,7 +127,15 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;li>&lt;code>sqlite&lt;/code> provides persistence for status, results, and events&lt;/li>
 &lt;/ul>
 &lt;h2 id="recommended-local-lab-setup">Recommended local lab setup&lt;/h2>
-&lt;p>For the protected validation example, use:&lt;/p></description></item><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
+&lt;p>For the protected validation example, use:&lt;/p></description></item><item><title>YANG Schemas</title><link>https://docs.nocfoundry.com/dev/configuration/yang-schemas/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/configuration/yang-schemas/</guid><description>&lt;h1 id="yang-schemas">YANG Schemas&lt;/h1>
+&lt;p>NOCFoundry can compile native YANG models at startup and use them to generate
+protocol-specific paths for gNMI and NETCONF operations. This replaces
+hardcoded path tables with schema-derived paths that stay accurate across
+vendor software versions.&lt;/p>
+&lt;h2 id="why-use-yang-schemas">Why use YANG schemas&lt;/h2>
+&lt;p>Without &lt;code>--schema-dir&lt;/code>, NOCFoundry uses hardcoded profiles that map operations
+to protocol paths. These profiles work for the specific software versions they
+were written for, but YANG paths can change between releases.&lt;/p></description></item><item><title>OIDC Endpoint Auth</title><link>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/auth/oidc-endpoint-auth/</guid><description>&lt;h1 id="oidc-endpoint-auth">OIDC Endpoint Auth&lt;/h1>
 &lt;p>NOCFoundry can protect the HTTP surfaces themselves, not just individual tool calls.&lt;/p>
 &lt;h2 id="protected-surfaces">Protected surfaces&lt;/h2>
 &lt;ul>
@@ -250,7 +258,121 @@ use the containerlab topology in &lt;code>examples/containerlab/&lt;/code>.&lt;/
 &lt;ul>
 &lt;li>&lt;a href="https://github.com/adrien19/noc-foundry/blob/main/examples/tools-configs/keycloak-protected-validation.yaml">&lt;code>examples/tools-configs/keycloak-protected-validation.yaml&lt;/code>&lt;/a>&lt;/li>
 &lt;li>&lt;a href="https://docs.nocfoundry.com/dev/workflows/validation-runs/">Validation runs&lt;/a>&lt;/li>
-&lt;/ul></description></item><item><title>CLI Reference</title><link>https://docs.nocfoundry.com/dev/reference/cli/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/reference/cli/</guid><description>&lt;h1 id="cli-reference">CLI Reference&lt;/h1>
+&lt;/ul></description></item><item><title>network-show</title><link>https://docs.nocfoundry.com/dev/resources/tools/network-show/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/tools/network-show/</guid><description>&lt;h1 id="network-show">&lt;code>network-show&lt;/code>&lt;/h1>
+&lt;p>&lt;code>network-show&lt;/code> is a vendor-agnostic tool for running ad-hoc or predefined CLI
+commands on network devices. It replaces the previous vendor-specific show tools
+with a single type that works across any device reachable through an SSH source.&lt;/p>
+&lt;h2 id="modes">Modes&lt;/h2>
+&lt;h3 id="ad-hoc-mode">Ad-hoc mode&lt;/h3>
+&lt;p>The operator or agent supplies the &lt;code>command&lt;/code> parameter at invocation time.
+The tool validates the command against a read-only safety check
+(rejects &lt;code>configure&lt;/code>, &lt;code>delete&lt;/code>, &lt;code>set&lt;/code>, &lt;code>commit&lt;/code>, &lt;code>rollback&lt;/code>, &lt;code>reboot&lt;/code>,
+&lt;code>shutdown&lt;/code>, etc.) and executes it through the source.&lt;/p></description></item><item><title>network-show-interfaces</title><link>https://docs.nocfoundry.com/dev/resources/tools/network-show-interfaces/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/tools/network-show-interfaces/</guid><description>&lt;h1 id="network-show-interfaces">&lt;code>network-show-interfaces&lt;/code>&lt;/h1>
+&lt;p>&lt;code>network-show-interfaces&lt;/code> retrieves interface status and counters from any
+network device that has a registered profile. It delegates to the query
+executor, which routes through the best available protocol and uses the
+schema-driven canonical mapper for normalization.&lt;/p>
+&lt;h2 id="what-it-does">What it does&lt;/h2>
+&lt;ul>
+&lt;li>executes the &lt;code>get_interfaces&lt;/code> operation from the device profile&lt;/li>
+&lt;li>routes through gNMI, NETCONF, or CLI based on source capabilities&lt;/li>
+&lt;li>returns canonical &lt;code>InterfaceState&lt;/code> records normalized across vendors&lt;/li>
+&lt;li>supports fleet operations via label selectors&lt;/li>
+&lt;/ul>
+&lt;h2 id="canonical-output-fields">Canonical output fields&lt;/h2>
+&lt;p>Each interface record includes:&lt;/p></description></item><item><title>network-show-version</title><link>https://docs.nocfoundry.com/dev/resources/tools/network-show-version/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/tools/network-show-version/</guid><description>&lt;h1 id="network-show-version">&lt;code>network-show-version&lt;/code>&lt;/h1>
+&lt;p>&lt;code>network-show-version&lt;/code> retrieves system version information from any network
+device that has a registered profile. It returns normalized hostname, software
+version, and chassis type through the best available protocol.&lt;/p>
+&lt;h2 id="canonical-output-fields">Canonical output fields&lt;/h2>
+&lt;table>
+ &lt;thead>
+ &lt;tr>
+ &lt;th>Field&lt;/th>
+ &lt;th>Description&lt;/th>
+ &lt;/tr>
+ &lt;/thead>
+ &lt;tbody>
+ &lt;tr>
+ &lt;td>&lt;code>Hostname&lt;/code>&lt;/td>
+ &lt;td>Device hostname&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;code>SoftwareVersion&lt;/code>&lt;/td>
+ &lt;td>Running software version string&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;code>ChassisType&lt;/code>&lt;/td>
+ &lt;td>Hardware chassis / platform type&lt;/td>
+ &lt;/tr>
+ &lt;/tbody>
+&lt;/table>
+&lt;p>Unmapped vendor-specific fields are captured in &lt;code>VendorExtensions&lt;/code>.&lt;/p>
+&lt;h2 id="key-behavior">Key behavior&lt;/h2>
+&lt;ul>
+&lt;li>executes the &lt;code>get_system_version&lt;/code> operation from the device profile&lt;/li>
+&lt;li>read-only by default&lt;/li>
+&lt;li>supports single &lt;code>source&lt;/code> or fleet &lt;code>sourceSelector&lt;/code>&lt;/li>
+&lt;li>automatic protocol selection based on source capabilities&lt;/li>
+&lt;li>optional &lt;code>transforms&lt;/code> for per-tool jq post-processing&lt;/li>
+&lt;li>YANG-schema-aware when &lt;code>--schema-dir&lt;/code> is set&lt;/li>
+&lt;/ul>
+&lt;h2 id="runtime-parameters">Runtime parameters&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>device&lt;/code> (optional, fleet mode): target a specific device in the selector&lt;/li>
+&lt;/ul>
+&lt;h2 id="example-configurations">Example configurations&lt;/h2>
+&lt;h3 id="single-source">Single source&lt;/h3>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">kind&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">tools&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">show_spine1_version&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">network-show-version&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">source&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">nokia-yang-lab/spine-1/gnmi&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="fleet-mode">Fleet mode&lt;/h3>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">kind&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">tools&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">show_all_versions&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">network-show-version&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">sourceSelector&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">matchLabels&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">role&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">spine&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">maxConcurrency&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">4&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="related">Related&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a href="https://docs.nocfoundry.com/dev/resources/tools/network-show-interfaces/">&lt;code>network-show-interfaces&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.nocfoundry.com/dev/resources/tools/network-query/">&lt;code>network-query&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.nocfoundry.com/dev/resources/tools/network-show/">&lt;code>network-show&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://docs.nocfoundry.com/dev/configuration/yang-schemas/">YANG schemas&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>network-query</title><link>https://docs.nocfoundry.com/dev/resources/tools/network-query/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/tools/network-query/</guid><description>&lt;h1 id="network-query">&lt;code>network-query&lt;/code>&lt;/h1>
+&lt;p>&lt;code>network-query&lt;/code> is a generic operation executor. Instead of being limited to a
+single operation like &lt;code>network-show-interfaces&lt;/code>, it accepts an &lt;code>operation&lt;/code>
+parameter at runtime and executes any operation defined in the device profile.&lt;/p>
+&lt;h2 id="when-to-use-it">When to use it&lt;/h2>
+&lt;p>Use &lt;code>network-query&lt;/code> when you want a single tool entry that can run different
+operations on demand, rather than configuring a separate tool for each
+operation.&lt;/p>
+&lt;p>Use the specialized tools (&lt;code>network-show-interfaces&lt;/code>, &lt;code>network-show-version&lt;/code>)
+when you want tighter control over what an agent can invoke.&lt;/p></description></item><item><title>network-list-devices</title><link>https://docs.nocfoundry.com/dev/resources/tools/network-list-devices/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/resources/tools/network-list-devices/</guid><description>&lt;h1 id="network-list-devices">&lt;code>network-list-devices&lt;/code>&lt;/h1>
+&lt;p>&lt;code>network-list-devices&lt;/code> lists all devices known to the server, including their
+labels, available transports, and vendor/platform metadata. It merges sibling
+sources (same device, different transports) into unified device entries.&lt;/p>
+&lt;h2 id="key-behavior">Key behavior&lt;/h2>
+&lt;ul>
+&lt;li>read-only&lt;/li>
+&lt;li>returns all devices from the device pool&lt;/li>
+&lt;li>supports optional filtering by &lt;code>vendor&lt;/code> or &lt;code>role&lt;/code>&lt;/li>
+&lt;li>merges multiple source transports per device into a single entry&lt;/li>
+&lt;li>useful for discovery before running fleet operations&lt;/li>
+&lt;/ul>
+&lt;h2 id="runtime-parameters">Runtime parameters&lt;/h2>
+&lt;ul>
+&lt;li>&lt;code>vendor&lt;/code> (optional): filter devices by vendor name&lt;/li>
+&lt;li>&lt;code>role&lt;/code> (optional): filter devices by role label&lt;/li>
+&lt;/ul>
+&lt;h2 id="example-configuration">Example configuration&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">kind&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">tools&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">list_lab_devices&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">type&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">network-list-devices&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="example-output">Example output&lt;/h2>
+&lt;p>Each device entry includes:&lt;/p></description></item><item><title>CLI Reference</title><link>https://docs.nocfoundry.com/dev/reference/cli/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://docs.nocfoundry.com/dev/reference/cli/</guid><description>&lt;h1 id="cli-reference">CLI Reference&lt;/h1>
 &lt;p>The root command is:&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">nocfoundry
 &lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Core entry points include:&lt;/p>
