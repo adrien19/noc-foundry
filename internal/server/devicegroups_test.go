@@ -47,7 +47,7 @@ devices:
       role: leaf
       site: east
 `
-	_, _, _, _, _, _, _, dgConfigs, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
+	_, _, _, _, _, _, _, dgConfigs, _, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
 	if err != nil {
 		t.Fatalf("UnmarshalResourceConfig() error: %v", err)
 	}
@@ -117,7 +117,7 @@ devices:
   - name: r1
     host: 10.0.0.1
 `
-	sourceConfigs, _, _, _, _, _, _, dgConfigs, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
+	sourceConfigs, _, _, _, _, _, _, dgConfigs, _, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
 	if err != nil {
 		t.Fatalf("UnmarshalResourceConfig() error: %v", err)
 	}
@@ -158,7 +158,7 @@ inventoryProviders:
     labels:
       env: production
 `
-	_, _, _, _, _, _, _, dgConfigs, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
+	_, _, _, _, _, _, _, dgConfigs, _, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
 	if err != nil {
 		t.Fatalf("UnmarshalResourceConfig() error: %v", err)
 	}
@@ -200,7 +200,7 @@ inventoryProviders:
     url: https://netbox.example.com
     token: my-token
 `
-	_, _, _, _, _, _, _, dgConfigs, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
+	_, _, _, _, _, _, _, dgConfigs, _, err := UnmarshalResourceConfig(context.Background(), []byte(yamlInput))
 	if err != nil {
 		t.Fatalf("UnmarshalResourceConfig() error: %v", err)
 	}

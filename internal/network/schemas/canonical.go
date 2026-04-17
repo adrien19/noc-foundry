@@ -86,6 +86,29 @@ func LookupCanonicalMap(operationID string) (*OperationCanonicalMap, bool) {
 	return m, ok
 }
 
+// ExtendCanonicalMap appends additional field mappings to an existing
+// canonical map. Duplicate YANGLeaf entries are silently skipped to
+// ensure idempotency. If the operationID is not yet registered, the
+// call is a no-op (the sidecar may reference an operation that hasn't
+// been registered yet; this is not an error).
+func ExtendCanonicalMap(operationID string, fields []FieldMapping) {
+	m, ok := canonicalMaps[operationID]
+	if !ok {
+		return
+	}
+	existing := make(map[string]bool, len(m.Fields))
+	for _, f := range m.Fields {
+		existing[f.YANGLeaf] = true
+	}
+	for _, f := range fields {
+		if existing[f.YANGLeaf] {
+			continue
+		}
+		m.Fields = append(m.Fields, f)
+		existing[f.YANGLeaf] = true
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Status normalizer registry
 // ---------------------------------------------------------------------------

@@ -1,5 +1,9 @@
 # Nokia SR Linux YANG-schema-driven lab catalog.
 #
+# This example uses a local directory of YANG models (`--schema-dir`).
+# For an alternative that clones YANG repos from Git automatically, see:
+#   examples/tools-configs/nokia-srlinux-git-repos.yaml
+#
 # This example demonstrates how YANG model schemas enhance protocol-level
 # operations.  When you pass `--schema-dir yang-models` the server:
 #

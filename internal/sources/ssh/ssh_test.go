@@ -89,7 +89,7 @@ func TestParseFromYamlSSH(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
-			got, _, _, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(tc.in))
+			got, _, _, _, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(tc.in))
 			if err != nil {
 				t.Fatalf("unable to unmarshal: %s", err)
 			}
@@ -130,7 +130,7 @@ func TestFailParseFromYamlSSH(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
-			_, _, _, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(tc.in))
+			_, _, _, _, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(tc.in))
 			if err == nil {
 				t.Fatal("expected error but got nil")
 			}
@@ -376,7 +376,7 @@ func TestParseSSHKeyFields(t *testing.T) {
 	ssh_key_passphrase: mysecret
 	`
 
-	got, _, _, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(in))
+	got, _, _, _, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(in))
 	if err != nil {
 		t.Fatalf("unable to unmarshal: %v", err)
 	}

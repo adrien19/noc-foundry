@@ -21,6 +21,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -115,18 +117,67 @@ func InitializeConfigs(ctx context.Context, cfg ServerConfig) (
 	l.InfoContext(ctx, fmt.Sprintf("Initialized %d sources: %s", len(sourcesMap), strings.Join(sourceNames, ", ")))
 
 	// Load YANG schemas and build schema-derived profiles (optional).
-	if cfg.SchemaDir != "" {
+	hasSchemaRepos := len(cfg.SchemaRepoConfigs) > 0
+	hasSchemaDir := cfg.SchemaDir != ""
+	if hasSchemaRepos || hasSchemaDir {
 		store := schemas.NewSchemaStore()
-		loaded, schemaErrs := schemas.LoadFromDirectory(store, cfg.SchemaDir)
-		for _, e := range schemaErrs {
-			l.WarnContext(ctx, fmt.Sprintf("Schema load warning: %v", e))
+		var totalLoaded int
+
+		// Load from Git repositories first.
+		if hasSchemaRepos {
+			cacheDir := cfg.SchemaCacheDir
+			if cacheDir == "" {
+				home, _ := os.UserHomeDir()
+				cacheDir = filepath.Join(home, ".cache", "nocfoundry", "yang-repos")
+			}
+			// Convert server config types to schemas-local types.
+			var repoConfigs []schemas.RepoConfig
+			for _, rc := range cfg.SchemaRepoConfigs {
+				var versions []schemas.RepoVersion
+				for _, v := range rc.Versions {
+					versions = append(versions, schemas.RepoVersion{
+						Ref:      v.Ref,
+						Vendor:   v.Vendor,
+						Platform: v.Platform,
+						Version:  v.Version,
+						Path:     v.Path,
+						OpsFile:  v.OpsFile,
+					})
+				}
+				repoConfigs = append(repoConfigs, schemas.RepoConfig{
+					Name:     rc.Name,
+					URL:      rc.URL,
+					Auth:     schemas.BuildGitAuth(rc.Auth.Type, rc.Auth.TokenEnv, rc.Auth.SSHKeyPath, rc.Auth.SSHKeyPassphraseEnv),
+					Versions: versions,
+				})
+			}
+			loaded, repoErrs := schemas.LoadFromRepos(store, repoConfigs, cacheDir)
+			for _, e := range repoErrs {
+				l.WarnContext(ctx, fmt.Sprintf("Schema repo warning: %v", e))
+			}
+			if loaded > 0 {
+				l.InfoContext(ctx, fmt.Sprintf("Loaded %d YANG schema bundles from git repos", loaded))
+			}
+			totalLoaded += loaded
 		}
-		if loaded > 0 {
-			l.InfoContext(ctx, fmt.Sprintf("Loaded %d YANG schema bundles from %s", loaded, cfg.SchemaDir))
+
+		// Load from local directory.
+		if hasSchemaDir {
+			loaded, schemaErrs := schemas.LoadFromDirectory(store, cfg.SchemaDir)
+			for _, e := range schemaErrs {
+				l.WarnContext(ctx, fmt.Sprintf("Schema load warning: %v", e))
+			}
+			if loaded > 0 {
+				l.InfoContext(ctx, fmt.Sprintf("Loaded %d YANG schema bundles from %s", loaded, cfg.SchemaDir))
+			}
+			totalLoaded += loaded
+		}
+
+		if totalLoaded > 0 {
 			schemas.BuildAndRegisterProfiles(store)
 			schemas.SetDefault(store)
 		} else {
-			l.WarnContext(ctx, fmt.Sprintf("No YANG schema bundles loaded from %s", cfg.SchemaDir))
+			l.WarnContext(ctx, "No YANG schema bundles loaded from any configured source")
 		}
 	}
 

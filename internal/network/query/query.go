@@ -188,9 +188,10 @@ func (e *Executor) Execute(ctx context.Context, source sources.Source, operation
 
 	vendor := identity.DeviceVendor()
 	platform := identity.DevicePlatform()
+	version := identity.DeviceVersion()
 
 	// Look up the profile.
-	profile, ok := profiles.Lookup(vendor, platform)
+	profile, ok := profiles.LookupForDevice(vendor, platform, version)
 	if !ok {
 		return nil, fmt.Errorf("no profile registered for %s.%s; source %q cannot execute operation %q", vendor, platform, sourceID, operationID)
 	}
@@ -211,7 +212,7 @@ func (e *Executor) Execute(ctx context.Context, source sources.Source, operation
 			continue
 		}
 
-		record, err := executePath(ctx, e, source, pp, operationID, sourceID, vendor, platform)
+		record, err := executePath(ctx, e, source, pp, operationID, sourceID, vendor, platform, version)
 		if err != nil {
 			lastErr = err
 			continue // try next protocol
@@ -235,23 +236,23 @@ func getCapabilities(source sources.Source) capabilities.SourceCapabilities {
 }
 
 // executePath runs a single protocol path and returns a canonical Record.
-func executePath(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string) (*models.Record, error) {
+func executePath(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string) (*models.Record, error) {
 	collectedAt := time.Now()
 
 	switch pp.Protocol {
 	case profiles.ProtocolGnmiOpenConfig, profiles.ProtocolGnmiNative:
-		return executeGnmi(ctx, e, source, pp, operationID, sourceID, vendor, platform, collectedAt)
+		return executeGnmi(ctx, e, source, pp, operationID, sourceID, vendor, platform, version, collectedAt)
 	case profiles.ProtocolCLI:
 		return executeCLI(ctx, e, source, pp, operationID, sourceID, vendor, platform, collectedAt)
 	case profiles.ProtocolNetconfOpenConfig, profiles.ProtocolNetconfNative:
-		return executeNetconf(ctx, e, source, pp, operationID, sourceID, vendor, platform, collectedAt)
+		return executeNetconf(ctx, e, source, pp, operationID, sourceID, vendor, platform, version, collectedAt)
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q", pp.Protocol)
 	}
 }
 
 // executeGnmi runs a gNMI Get RPC and normalizes the response.
-func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string, collectedAt time.Time) (*models.Record, error) {
+func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, collectedAt time.Time) (*models.Record, error) {
 	querier, ok := source.(capabilities.GnmiQuerier)
 	if !ok {
 		return nil, fmt.Errorf("source %q does not implement GnmiQuerier", sourceID)
@@ -268,7 +269,7 @@ func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp pro
 		protocol = models.ProtocolGnmiNative
 	}
 
-	payload, quality, err := normalizeGnmiResponse(result, operationID, vendor, platform, e.SchemaStore)
+	payload, quality, err := normalizeGnmiResponse(result, operationID, vendor, platform, version, e.SchemaStore)
 	if err != nil {
 		return nil, err
 	}
@@ -301,13 +302,13 @@ func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp pro
 		},
 		Payload: payload,
 		Quality: quality,
-		Native:  enrichNativeMeta(e, vendor, platform, pp.Paths, ""),
+		Native:  enrichNativeMeta(e, vendor, platform, version, pp.Paths, ""),
 	}, nil
 }
 
 // enrichNativeMeta populates NativeMeta with schema model information
 // when a SchemaStore is available. Falls back to basic path info.
-func enrichNativeMeta(e *Executor, vendor, platform string, paths []string, filter string) *models.NativeMeta {
+func enrichNativeMeta(e *Executor, vendor, platform, version string, paths []string, filter string) *models.NativeMeta {
 	nativePath := filter
 	if nativePath == "" && len(paths) > 0 {
 		nativePath = fmt.Sprintf("%v", paths)
@@ -319,11 +320,6 @@ func enrichNativeMeta(e *Executor, vendor, platform string, paths []string, filt
 
 	if e == nil || e.SchemaStore == nil {
 		return meta
-	}
-
-	version := ""
-	if identity, ok := findVersionFromContext(e, vendor, platform); ok {
-		version = identity
 	}
 
 	bundle, ok := e.SchemaStore.LookupBestMatch(vendor, platform, version)
@@ -348,14 +344,6 @@ func enrichNativeMeta(e *Executor, vendor, platform string, paths []string, filt
 	meta.ModelName = resolved.ModuleName
 	meta.ModelRevision = resolved.ModuleRevision
 	return meta
-}
-
-// findVersionFromContext is a placeholder for version resolution.
-// In practice, the version would come from the SourceIdentity of the
-// source being queried, but the executePath chain doesn't carry it.
-// Returns empty string by default; callers use LookupBestMatch fallback.
-func findVersionFromContext(_ *Executor, _, _ string) (string, bool) {
-	return "", false
 }
 
 // executeCLI runs a CLI command and normalizes the response.
@@ -442,7 +430,7 @@ func executeCLI(ctx context.Context, e *Executor, source sources.Source, pp prof
 // normalizeGnmiResponse converts gNMI Get results to canonical payload.
 // When a SchemaStore is available, it tries schema-driven canonical mapping
 // first and falls back to the hardcoded per-vendor parsers on failure.
-func normalizeGnmiResponse(result *capabilities.GnmiGetResult, operationID, vendor, platform string, schemaStore *schemas.SchemaStore) (any, models.QualityMeta, error) {
+func normalizeGnmiResponse(result *capabilities.GnmiGetResult, operationID, vendor, platform, version string, schemaStore *schemas.SchemaStore) (any, models.QualityMeta, error) {
 	if result == nil || len(result.Notifications) == 0 {
 		return nil, models.QualityMeta{MappingQuality: models.MappingPartial, Warnings: []string{"empty gNMI response"}}, fmt.Errorf("empty gNMI response")
 	}
@@ -454,7 +442,7 @@ func normalizeGnmiResponse(result *capabilities.GnmiGetResult, operationID, vend
 	}
 
 	// Try schema-driven canonical mapping first.
-	if payload, quality, ok := trySchemaMapGnmi(merged, operationID, schemaStore, vendor, platform); ok {
+	if payload, quality, ok := trySchemaMapGnmi(merged, operationID, schemaStore, vendor, platform, version); ok {
 		return payload, quality, nil
 	}
 
@@ -474,10 +462,10 @@ func normalizeGnmiResponse(result *capabilities.GnmiGetResult, operationID, vend
 // values. Returns (payload, quality, true) on success. The third return is
 // false when the mapper is unavailable or produces empty results, signalling
 // the caller to fall back to hardcoded parsers.
-func trySchemaMapGnmi(merged map[string]json.RawMessage, operationID string, schemaStore *schemas.SchemaStore, vendor, platform string) (any, models.QualityMeta, bool) {
+func trySchemaMapGnmi(merged map[string]json.RawMessage, operationID string, schemaStore *schemas.SchemaStore, vendor, platform, version string) (any, models.QualityMeta, bool) {
 	var bundle *schemas.SchemaBundle
 	if schemaStore != nil {
-		b, ok := schemaStore.LookupBestMatch(vendor, platform, "")
+		b, ok := schemaStore.LookupBestMatch(vendor, platform, version)
 		if ok {
 			bundle = b
 		}

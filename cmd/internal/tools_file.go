@@ -39,6 +39,7 @@ type ToolsFile struct {
 	Prompts         server.PromptConfigs         `yaml:"prompts"`
 	Promptsets      server.PromptsetConfigs      `yaml:"promptsets"`
 	DeviceGroups    server.DeviceGroupConfigs    `yaml:"deviceGroups"`
+	SchemaRepos     server.SchemaRepoConfigs     `yaml:"schemaRepos"`
 }
 
 type ToolsFileParser struct {
@@ -70,7 +71,7 @@ func (p *ToolsFileParser) ParseToolsFile(ctx context.Context, raw []byte) (Tools
 	}
 
 	// Parse contents
-	toolsFile.Sources, toolsFile.AuthServices, toolsFile.EmbeddingModels, toolsFile.Tools, toolsFile.Toolsets, toolsFile.Prompts, toolsFile.Promptsets, toolsFile.DeviceGroups, err = server.UnmarshalResourceConfig(ctx, raw)
+	toolsFile.Sources, toolsFile.AuthServices, toolsFile.EmbeddingModels, toolsFile.Tools, toolsFile.Toolsets, toolsFile.Prompts, toolsFile.Promptsets, toolsFile.DeviceGroups, toolsFile.SchemaRepos, err = server.UnmarshalResourceConfig(ctx, raw)
 	if err != nil {
 		return toolsFile, err
 	}
@@ -297,6 +298,18 @@ func mergeToolsFiles(files ...ToolsFile) (ToolsFile, error) {
 
 		// Merge device groups (no conflict detection - groups are identified by name)
 		merged.DeviceGroups = append(merged.DeviceGroups, file.DeviceGroups...)
+
+		// Check for conflicts and merge schemaRepos
+		for name, repo := range file.SchemaRepos {
+			if merged.SchemaRepos == nil {
+				merged.SchemaRepos = make(server.SchemaRepoConfigs)
+			}
+			if _, exists := merged.SchemaRepos[name]; exists {
+				conflicts = append(conflicts, fmt.Sprintf("schemaRepo '%s' (file #%d)", name, fileIndex+1))
+			} else {
+				merged.SchemaRepos[name] = repo
+			}
+		}
 	}
 
 	// If conflicts were detected, return an error

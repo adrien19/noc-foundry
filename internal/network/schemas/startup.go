@@ -41,7 +41,7 @@ func BuildAndRegisterProfiles(store *SchemaStore) {
 	best := make(map[string]*candidate) // key: vendor.platform
 
 	for _, bundle := range store.All() {
-		mappings := OperationMappingsForVendor(bundle.Key.Vendor, bundle.Key.Platform)
+		mappings := GetOperationMappings(bundle.Key.Vendor, bundle.Key.Platform, bundle.Key.Version)
 		if mappings == nil {
 			slog.Warn("no operation mappings defined",
 				"vendor", bundle.Key.Vendor,
@@ -97,7 +97,7 @@ func BuildAndRegisterProfiles(store *SchemaStore) {
 		}
 	}
 
-	// Register the best profile for each vendor.platform.
+	// Register the best profile for each vendor.platform, plus versioned profiles.
 	for _, c := range best {
 		fallback, _ := profiles.Lookup(c.bundle.Key.Vendor, c.bundle.Key.Platform)
 		merged := MergeProfiles(c.profile, fallback)
@@ -108,6 +108,29 @@ func BuildAndRegisterProfiles(store *SchemaStore) {
 				"vendor", c.bundle.Key.Vendor,
 				"platform", c.bundle.Key.Platform,
 				"version", c.bundle.Key.Version,
+				"operations", len(merged.Operations),
+			)
+		}
+	}
+
+	// Register per-version profiles for all bundles (not just best).
+	for _, bundle := range store.All() {
+		mappings := GetOperationMappings(bundle.Key.Vendor, bundle.Key.Platform, bundle.Key.Version)
+		if mappings == nil {
+			continue
+		}
+
+		schemaProfile, _ := BuildProfile(bundle, mappings)
+		fallback, _ := profiles.Lookup(bundle.Key.Vendor, bundle.Key.Platform)
+		merged := MergeProfiles(schemaProfile, fallback)
+		merged.Version = bundle.Key.Version
+
+		if len(merged.Operations) > 0 {
+			profiles.RegisterVersioned(merged)
+			slog.Info("registered versioned profile",
+				"vendor", bundle.Key.Vendor,
+				"platform", bundle.Key.Platform,
+				"version", bundle.Key.Version,
 				"operations", len(merged.Operations),
 			)
 		}

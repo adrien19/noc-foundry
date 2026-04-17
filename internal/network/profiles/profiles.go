@@ -110,12 +110,18 @@ type OperationDescriptor struct {
 type Profile struct {
 	Vendor     string
 	Platform   string
+	Version    string // optional; empty for unversioned (init()-registered) profiles
 	Operations map[string]OperationDescriptor
 }
 
-// profileKey creates the registry lookup key.
+// profileKey creates the registry lookup key (version-blind).
 func profileKey(vendor, platform string) string {
 	return strings.ToLower(vendor) + "." + strings.ToLower(platform)
+}
+
+// versionedProfileKey creates a version-specific registry lookup key.
+func versionedProfileKey(vendor, platform, version string) string {
+	return strings.ToLower(vendor) + "." + strings.ToLower(platform) + "." + strings.ToLower(version)
 }
 
 var (
@@ -162,4 +168,34 @@ func AllProfiles() map[string]*Profile {
 		out[k] = v
 	}
 	return out
+}
+
+// RegisterVersioned adds a version-specific profile to the registry.
+// Panics on duplicate versioned key. The profile's Version field must be set.
+func RegisterVersioned(profile *Profile) {
+	if profile.Version == "" {
+		panic("RegisterVersioned called with empty version")
+	}
+	key := versionedProfileKey(profile.Vendor, profile.Platform, profile.Version)
+	mu.Lock()
+	defer mu.Unlock()
+	if _, exists := registry[key]; exists {
+		panic(fmt.Sprintf("versioned profile %q already registered", key))
+	}
+	registry[key] = profile
+}
+
+// LookupForDevice returns the best profile for a device. When version is
+// non-empty it tries a version-specific profile first, then falls back to
+// the unversioned vendor.platform profile.
+func LookupForDevice(vendor, platform, version string) (*Profile, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	if version != "" {
+		if p, ok := registry[versionedProfileKey(vendor, platform, version)]; ok {
+			return p, true
+		}
+	}
+	p, ok := registry[profileKey(vendor, platform)]
+	return p, ok
 }

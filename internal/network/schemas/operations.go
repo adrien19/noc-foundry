@@ -14,6 +14,8 @@
 
 package schemas
 
+import "sync"
+
 // OperationMapping defines the mapping from a well-known operation ID
 // to the YANG paths used to resolve that operation against a compiled
 // schema tree. NativePaths are vendor-native YANG paths; OCPaths are
@@ -63,8 +65,9 @@ var NokiaSROSMappings = []OperationMapping{
 	},
 }
 
-// OperationMappingsForVendor returns the operation mappings for the given
-// vendor and platform. Returns nil if no mappings are defined.
+// OperationMappingsForVendor returns the hardcoded operation mappings for the
+// given vendor and platform. Returns nil if no mappings are defined.
+// This is the fallback used when no sidecar file is present.
 func OperationMappingsForVendor(vendor, platform string) []OperationMapping {
 	switch {
 	case vendor == "nokia" && platform == "srlinux":
@@ -74,4 +77,37 @@ func OperationMappingsForVendor(vendor, platform string) []OperationMapping {
 	default:
 		return nil
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Sidecar mapping registry
+// ---------------------------------------------------------------------------
+
+// sidecarMappings stores operation mappings loaded from nocfoundry-ops.yaml
+// sidecar files. Key: SchemaKey.String() → []OperationMapping.
+var sidecarMappings sync.Map
+
+// RegisterSidecarMappings stores sidecar-provided operation mappings for
+// the given schema key. These take priority over hardcoded mappings.
+func RegisterSidecarMappings(key SchemaKey, mappings []OperationMapping) {
+	sidecarMappings.Store(key.String(), mappings)
+}
+
+// GetOperationMappings returns the operation mappings for a vendor/platform/version.
+// It first checks the sidecar registry (exact key match), then falls back
+// to the hardcoded OperationMappingsForVendor switch.
+func GetOperationMappings(vendor, platform, version string) []OperationMapping {
+	key := SchemaKey{Vendor: vendor, Platform: platform, Version: version}
+	if v, ok := sidecarMappings.Load(key.String()); ok {
+		return v.([]OperationMapping)
+	}
+	return OperationMappingsForVendor(vendor, platform)
+}
+
+// ResetSidecarMappings clears the sidecar mapping registry. For testing only.
+func ResetSidecarMappings() {
+	sidecarMappings.Range(func(key, _ any) bool {
+		sidecarMappings.Delete(key)
+		return true
+	})
 }

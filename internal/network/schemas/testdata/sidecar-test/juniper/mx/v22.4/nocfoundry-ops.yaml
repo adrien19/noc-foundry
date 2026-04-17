@@ -1,0 +1,23 @@
+operations:
+  - id: get_interfaces
+    native_paths:
+      - /junos-if:interfaces/interface
+    oc_paths:
+      - /openconfig-interfaces:interfaces/interface
+    canonical_leaf_aliases:
+      - yang_leaf: oper-link-status
+        canonical_field: OperStatus
+        normalizer: oper_status
+      - yang_leaf: junos-admin-status
+        canonical_field: AdminStatus
+        normalizer: admin_status
+  - id: get_system_version
+    native_paths:
+      - /junos-sys:system-information
+    oc_paths:
+      - /openconfig-system:system/state
+    canonical_leaf_aliases:
+      - yang_leaf: junos-version
+        canonical_field: SoftwareVersion
+      - yang_leaf: junos-hostname
+        canonical_field: Hostname
