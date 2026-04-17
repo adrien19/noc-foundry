@@ -54,4 +54,5 @@ func PersistentFlags(parentCmd *cobra.Command, opts *NOCFoundryOptions) {
 	persistentFlags.StringSliceVar(&opts.PrebuiltConfigs, "prebuilt", []string{}, prebuiltHelp)
 	persistentFlags.StringSliceVar(&opts.Cfg.UserAgentMetadata, "user-agent-metadata", []string{}, "Appends additional metadata to the User-Agent.")
 	persistentFlags.StringVar(&opts.Cfg.SchemaDir, "schema-dir", "", "Directory containing vendor YANG models. Structure: <dir>/<vendor>/<platform>/<version>/*.yang")
+	persistentFlags.StringVar(&opts.Cfg.SchemaCacheDir, "schema-cache-dir", "", "Directory used to cache cloned YANG Git repositories. Default: ~/.cache/nocfoundry/yang-repos/")
 }

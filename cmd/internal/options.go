@@ -280,6 +280,7 @@ func (opts *NOCFoundryOptions) LoadConfig(ctx context.Context, parser *ToolsFile
 	opts.Cfg.PromptConfigs = finalToolsFile.Prompts
 	opts.Cfg.PromptsetConfigs = finalToolsFile.Promptsets
 	opts.Cfg.DeviceGroupConfigs = finalToolsFile.DeviceGroups
+	opts.Cfg.SchemaRepoConfigs = finalToolsFile.SchemaRepos
 
 	if err := opts.LoadServerRuntimeConfig(ctx, &ServerConfigParser{}); err != nil {
 		if loggerErr == nil {

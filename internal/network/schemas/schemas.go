@@ -359,6 +359,19 @@ func LoadFromDirectory(store *SchemaStore, baseDir string) (int, []error) {
 					continue
 				}
 				loaded++
+
+				// Try loading vendor sidecar (nocfoundry-ops.yaml).
+				if sidecar, ok, serr := TryLoadSidecar(versionDir); serr != nil {
+					errs = append(errs, fmt.Errorf("sidecar for %s: %w", key.String(), serr))
+				} else if ok {
+					RegisterSidecarMappings(key, sidecar.ToOperationMappings())
+					sidecar.ExtendCanonicalMaps()
+					slog.Info("loaded vendor sidecar",
+						"vendor", key.Vendor,
+						"platform", key.Platform,
+						"version", key.Version,
+					)
+				}
 			}
 		}
 	}

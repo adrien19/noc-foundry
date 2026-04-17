@@ -1,0 +1,21 @@
+# Prebuilt NOCFoundry operations mapping for Nokia SR Linux.
+#
+# This file is embedded in the binary and used as the default sidecar
+# when loading Nokia SR Linux YANG schemas from a Git repository that
+# does not include its own nocfoundry-ops.yaml.
+#
+# Users can override this by specifying an opsFile in their
+# schemaRepos version configuration.
+operations:
+  - id: get_interfaces
+    native_paths:
+      - /srl_nokia-interfaces:interface
+    oc_paths:
+      - /openconfig-interfaces:interfaces/interface
+
+  - id: get_system_version
+    native_paths:
+      - /srl_nokia-system:system/information
+      - /srl_nokia-system:system/name
+    oc_paths:
+      - /openconfig-system:system/state

@@ -167,7 +167,7 @@ type xmlNCSROSSystemState struct {
 // and returns a canonical Record. UseGetConfig selects <get-config> (config
 // data only); the default <get> retrieves both configuration and state data,
 // which is required for operational metrics such as admin/oper status.
-func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string, collectedAt time.Time) (*models.Record, error) {
+func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, collectedAt time.Time) (*models.Record, error) {
 	querier, ok := source.(capabilities.NetconfQuerier)
 	if !ok {
 		return nil, fmt.Errorf("source %q does not implement NetconfQuerier", sourceID)
@@ -195,7 +195,7 @@ func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp 
 		protocol = models.ProtocolNetconfNative
 	}
 
-	payload, quality, err := normalizeNetconfResponse(rawXML, pp.Protocol, operationID, vendor, platform, e.SchemaStore)
+	payload, quality, err := normalizeNetconfResponse(rawXML, pp.Protocol, operationID, vendor, platform, version, e.SchemaStore)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp 
 		},
 		Payload: payload,
 		Quality: quality,
-		Native:  enrichNativeMeta(e, vendor, platform, nil, pp.Filter),
+		Native:  enrichNativeMeta(e, vendor, platform, version, nil, pp.Filter),
 	}, nil
 }
 
@@ -239,9 +239,9 @@ func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp 
 // normalizeNetconfResponse dispatches XML normalization by operation ID.
 // When a SchemaStore is available, it tries schema-driven canonical mapping
 // first and falls back to the hardcoded per-vendor XML struct parsers.
-func normalizeNetconfResponse(rawXML []byte, protocol profiles.Protocol, operationID, vendor, platform string, schemaStore *schemas.SchemaStore) (any, models.QualityMeta, error) {
+func normalizeNetconfResponse(rawXML []byte, protocol profiles.Protocol, operationID, vendor, platform, version string, schemaStore *schemas.SchemaStore) (any, models.QualityMeta, error) {
 	// Try schema-driven canonical mapping first.
-	if payload, quality, ok := trySchemaMapNetconf(rawXML, operationID, schemaStore, vendor, platform); ok {
+	if payload, quality, ok := trySchemaMapNetconf(rawXML, operationID, schemaStore, vendor, platform, version); ok {
 		return payload, quality, nil
 	}
 
@@ -262,10 +262,10 @@ func normalizeNetconfResponse(rawXML []byte, protocol profiles.Protocol, operati
 // trySchemaMapNetconf attempts schema-driven mapping of raw NETCONF XML.
 // Returns (payload, quality, true) on success, or (nil, _, false) when
 // the mapper is unavailable or produces empty results.
-func trySchemaMapNetconf(rawXML []byte, operationID string, schemaStore *schemas.SchemaStore, vendor, platform string) (any, models.QualityMeta, bool) {
+func trySchemaMapNetconf(rawXML []byte, operationID string, schemaStore *schemas.SchemaStore, vendor, platform, version string) (any, models.QualityMeta, bool) {
 	var bundle *schemas.SchemaBundle
 	if schemaStore != nil {
-		b, ok := schemaStore.LookupBestMatch(vendor, platform, "")
+		b, ok := schemaStore.LookupBestMatch(vendor, platform, version)
 		if ok {
 			bundle = b
 		}

@@ -89,6 +89,10 @@ type ServerConfig struct {
 	// When set, YANG models are compiled at startup and used to build
 	// schema-derived profiles (overriding hardcoded defaults for gNMI/NETCONF paths).
 	SchemaDir string
+	// SchemaRepoConfigs defines remote Git repositories containing vendor YANG models.
+	SchemaRepoConfigs SchemaRepoConfigs
+	// SchemaCacheDir is the directory used to cache cloned YANG Git repositories.
+	SchemaCacheDir string
 }
 
 type ValidationRunConfig struct {
@@ -280,7 +284,7 @@ type PromptConfigs map[string]prompts.PromptConfig
 type PromptsetConfigs map[string]prompts.PromptsetConfig
 type DeviceGroupConfigs []*devicegroups.Config
 
-func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, AuthServiceConfigs, EmbeddingModelConfigs, ToolConfigs, ToolsetConfigs, PromptConfigs, PromptsetConfigs, DeviceGroupConfigs, error) {
+func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, AuthServiceConfigs, EmbeddingModelConfigs, ToolConfigs, ToolsetConfigs, PromptConfigs, PromptsetConfigs, DeviceGroupConfigs, SchemaRepoConfigs, error) {
 	// prepare configs map
 	var sourceConfigs SourceConfigs
 	var authServiceConfigs AuthServiceConfigs
@@ -290,6 +294,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 	var promptConfigs PromptConfigs
 	var promptsetConfigs PromptsetConfigs
 	var deviceGroupConfigs DeviceGroupConfigs
+	var schemaRepoConfigs SchemaRepoConfigs
 
 	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	// for loop to unmarshal documents with the `---` separator
@@ -299,15 +304,15 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 			if err == io.EOF {
 				break
 			}
-			return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to decode YAML document: %w", err)
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to decode YAML document: %w", err)
 		}
 		var kind, name string
 		var ok bool
 		if kind, ok = resource["kind"].(string); !ok {
-			return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("missing 'kind' field or it is not a string: %v", resource)
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("missing 'kind' field or it is not a string: %v", resource)
 		}
 		if name, ok = resource["name"].(string); !ok {
-			return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("missing 'name' field or it is not a string")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("missing 'name' field or it is not a string")
 		}
 		// remove 'kind' from map for strict unmarshaling
 		delete(resource, "kind")
@@ -316,7 +321,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "sources":
 			c, err := UnmarshalYAMLSourceConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if sourceConfigs == nil {
 				sourceConfigs = make(SourceConfigs)
@@ -325,7 +330,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "authServices":
 			c, err := UnmarshalYAMLAuthServiceConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if authServiceConfigs == nil {
 				authServiceConfigs = make(AuthServiceConfigs)
@@ -334,7 +339,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "tools":
 			c, err := UnmarshalYAMLToolConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if toolConfigs == nil {
 				toolConfigs = make(ToolConfigs)
@@ -343,7 +348,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "toolsets":
 			c, err := UnmarshalYAMLToolsetConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if toolsetConfigs == nil {
 				toolsetConfigs = make(ToolsetConfigs)
@@ -352,7 +357,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "embeddingModels":
 			c, err := UnmarshalYAMLEmbeddingModelConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if embeddingModelConfigs == nil {
 				embeddingModelConfigs = make(EmbeddingModelConfigs)
@@ -361,7 +366,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "prompts":
 			c, err := UnmarshalYAMLPromptConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if promptConfigs == nil {
 				promptConfigs = make(PromptConfigs)
@@ -370,7 +375,7 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "promptsets":
 			c, err := UnmarshalYAMLPromptsetConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			if promptsetConfigs == nil {
 				promptsetConfigs = make(PromptsetConfigs)
@@ -379,14 +384,23 @@ func UnmarshalResourceConfig(ctx context.Context, raw []byte) (SourceConfigs, Au
 		case "deviceGroups":
 			c, err := UnmarshalYAMLDeviceGroupConfig(ctx, name, resource)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
 			}
 			deviceGroupConfigs = append(deviceGroupConfigs, c)
+		case "schemaRepos":
+			c, err := UnmarshalYAMLSchemaRepoConfig(name, resource)
+			if err != nil {
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("error unmarshaling %s: %s", kind, err)
+			}
+			if schemaRepoConfigs == nil {
+				schemaRepoConfigs = make(SchemaRepoConfigs)
+			}
+			schemaRepoConfigs[name] = c
 		default:
-			return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("invalid kind %s", kind)
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("invalid kind %s", kind)
 		}
 	}
-	return sourceConfigs, authServiceConfigs, embeddingModelConfigs, toolConfigs, toolsetConfigs, promptConfigs, promptsetConfigs, deviceGroupConfigs, nil
+	return sourceConfigs, authServiceConfigs, embeddingModelConfigs, toolConfigs, toolsetConfigs, promptConfigs, promptsetConfigs, deviceGroupConfigs, schemaRepoConfigs, nil
 }
 
 func UnmarshalYAMLSourceConfig(ctx context.Context, name string, r map[string]any) (sources.SourceConfig, error) {

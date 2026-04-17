@@ -84,7 +84,7 @@ phases:
 		},
 	}
 
-	_, _, _, got, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(in))
+	_, _, _, got, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(in))
 	if err != nil {
 		t.Fatalf("unable to unmarshal: %s", err)
 	}
@@ -111,7 +111,7 @@ profiles:
               operation: get_system_version
 `
 
-	_, _, _, got, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(in))
+	_, _, _, got, _, _, _, _, _, err := server.UnmarshalResourceConfig(context.Background(), testutils.FormatYaml(in))
 	if err != nil {
 		t.Fatalf("unable to unmarshal profile-backed validator: %s", err)
 	}

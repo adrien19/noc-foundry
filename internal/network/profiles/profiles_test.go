@@ -162,3 +162,68 @@ func TestProtocolPreferenceOrder(t *testing.T) {
 		t.Errorf("last protocol path = %q, want %q", last.Protocol, profiles.ProtocolCLI)
 	}
 }
+
+func TestLookupForDevice_VersionedFirst(t *testing.T) {
+	// Register a versioned profile.
+	profiles.RegisterVersioned(&profiles.Profile{
+		Vendor:   "testvendor",
+		Platform: "testplat",
+		Version:  "v1.0",
+		Operations: map[string]profiles.OperationDescriptor{
+			profiles.OpGetInterfaces: {
+				OperationID: profiles.OpGetInterfaces,
+				Paths: []profiles.ProtocolPath{
+					{Protocol: profiles.ProtocolCLI, Command: "show iface v1"},
+				},
+			},
+		},
+	})
+
+	// Also register an unversioned profile.
+	profiles.RegisterOrReplace(&profiles.Profile{
+		Vendor:   "testvendor",
+		Platform: "testplat",
+		Operations: map[string]profiles.OperationDescriptor{
+			profiles.OpGetInterfaces: {
+				OperationID: profiles.OpGetInterfaces,
+				Paths: []profiles.ProtocolPath{
+					{Protocol: profiles.ProtocolCLI, Command: "show iface generic"},
+				},
+			},
+		},
+	})
+
+	// Versioned lookup should return the v1.0 profile.
+	p, ok := profiles.LookupForDevice("testvendor", "testplat", "v1.0")
+	if !ok {
+		t.Fatal("expected to find versioned profile")
+	}
+	cmd := p.Operations[profiles.OpGetInterfaces].Paths[0].Command
+	if cmd != "show iface v1" {
+		t.Errorf("Command = %q, want %q", cmd, "show iface v1")
+	}
+}
+
+func TestLookupForDevice_FallbackToUnversioned(t *testing.T) {
+	// Unknown version should fall back to the unversioned profile.
+	p, ok := profiles.LookupForDevice("testvendor", "testplat", "v99.99")
+	if !ok {
+		t.Fatal("expected fallback to unversioned profile")
+	}
+	cmd := p.Operations[profiles.OpGetInterfaces].Paths[0].Command
+	if cmd != "show iface generic" {
+		t.Errorf("Command = %q, want %q (unversioned fallback)", cmd, "show iface generic")
+	}
+}
+
+func TestLookupForDevice_EmptyVersion(t *testing.T) {
+	// Empty version should use the unversioned profile directly.
+	p, ok := profiles.LookupForDevice("testvendor", "testplat", "")
+	if !ok {
+		t.Fatal("expected unversioned profile for empty version")
+	}
+	cmd := p.Operations[profiles.OpGetInterfaces].Paths[0].Command
+	if cmd != "show iface generic" {
+		t.Errorf("Command = %q, want %q", cmd, "show iface generic")
+	}
+}

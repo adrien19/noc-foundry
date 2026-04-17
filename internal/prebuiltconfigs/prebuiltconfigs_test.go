@@ -91,3 +91,24 @@ func getOrFatal(t *testing.T, prebuiltSourceConfig string) []byte {
 	}
 	return bytes
 }
+
+func TestGetSidecar_NokiaSrlinux(t *testing.T) {
+	data, err := GetSidecar("nokia", "srlinux")
+	if err != nil {
+		t.Fatalf("expected prebuilt sidecar for nokia/srlinux, got error: %v", err)
+	}
+	s := string(data)
+	if !strings.Contains(s, "get_interfaces") {
+		t.Error("expected get_interfaces operation in nokia/srlinux sidecar")
+	}
+	if !strings.Contains(s, "get_system_version") {
+		t.Error("expected get_system_version operation in nokia/srlinux sidecar")
+	}
+}
+
+func TestGetSidecar_Unknown(t *testing.T) {
+	_, err := GetSidecar("unknown", "platform")
+	if err == nil {
+		t.Fatal("expected error for unknown vendor/platform sidecar")
+	}
+}
