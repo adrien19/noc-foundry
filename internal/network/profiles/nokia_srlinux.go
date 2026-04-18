@@ -21,6 +21,28 @@ func init() {
 	Register(&Profile{
 		Vendor:   "nokia",
 		Platform: "srlinux",
+		DiagnosticCommands: map[string]DiagnosticCommandTemplate{
+			OpRunPing: {
+				OperationID: OpRunPing,
+				Command:     "ping {target} count {count}",
+				Optional: []DiagnosticCommandFragment{
+					{Parameter: "vrf", Template: " network-instance {vrf}"},
+					{Parameter: "source", Template: " source {source}"},
+				},
+			},
+			OpRunTraceroute: {
+				OperationID: OpRunTraceroute,
+				Command:     "traceroute {target} max-hops {max_hops}",
+				Optional: []DiagnosticCommandFragment{
+					{Parameter: "vrf", Template: " network-instance {vrf}"},
+					{Parameter: "source", Template: " source {source}"},
+				},
+			},
+			OpGetConfigurationDiff: {
+				OperationID: OpGetConfigurationDiff,
+				Command:     "show configuration diff {source} {target}",
+			},
+		},
 		Operations: map[string]OperationDescriptor{
 			OpGetInterfaces: {
 				OperationID: OpGetInterfaces,

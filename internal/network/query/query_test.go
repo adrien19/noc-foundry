@@ -60,7 +60,7 @@ func TestMain(m *testing.M) {
 			profiles.OpGetRouteTable: {
 				OperationID: profiles.OpGetRouteTable,
 				Parameters: []profiles.OperationParameter{
-					{Name: "prefix", PathKey: "prefix", GnmiPathTemplate: "/routes/route[prefix={prefix}]"},
+					{Name: "prefix", PathKey: "prefix", TargetContainer: "route", GnmiPathTemplate: "/routes/route[prefix={prefix}]"},
 				},
 				Limits: &profiles.OperationLimits{DefaultCount: 1, MaxCount: 2},
 				Paths: []profiles.ProtocolPath{
@@ -68,7 +68,15 @@ func TestMain(m *testing.M) {
 						Protocol: profiles.ProtocolGnmiNative,
 						Paths:    []string{"/routes/route"},
 						Parameters: []profiles.OperationParameter{
-							{Name: "prefix", PathKey: "prefix", GnmiPathTemplate: "/routes/route[prefix={prefix}]"},
+							{Name: "prefix", PathKey: "prefix", TargetContainer: "route", GnmiPathTemplate: "/routes/route[prefix={prefix}]"},
+						},
+						Limits: &profiles.OperationLimits{DefaultCount: 1, MaxCount: 2},
+					},
+					{
+						Protocol: profiles.ProtocolNetconfNative,
+						Filter:   `<network-instance xmlns="urn:test"><route-table><route/></route-table></network-instance>`,
+						Parameters: []profiles.OperationParameter{
+							{Name: "prefix", PathKey: "prefix", TargetContainer: "route"},
 						},
 						Limits: &profiles.OperationLimits{DefaultCount: 1, MaxCount: 2},
 					},
@@ -133,6 +141,45 @@ func (m *mockGnmiSource) GnmiGet(_ context.Context, paths []string, _ string) (*
 		return nil, fmt.Errorf("no mock result")
 	}
 	return m.result, nil
+}
+
+// mockNetconfSource implements SourceIdentity + CapabilityProvider + NetconfQuerier.
+type mockNetconfSource struct {
+	vendor    string
+	platform  string
+	ocPaths   bool
+	native    bool
+	filter    string
+	datastore string
+	result    []byte
+	rawXML    []byte
+}
+
+func (m *mockNetconfSource) SourceType() string             { return "mock-netconf" }
+func (m *mockNetconfSource) ToConfig() sources.SourceConfig { return nil }
+func (m *mockNetconfSource) DeviceVendor() string           { return m.vendor }
+func (m *mockNetconfSource) DevicePlatform() string         { return m.platform }
+func (m *mockNetconfSource) DeviceVersion() string          { return "" }
+func (m *mockNetconfSource) Capabilities() capabilities.SourceCapabilities {
+	return capabilities.SourceCapabilities{
+		OpenConfigPaths: m.ocPaths,
+		NativeYang:      m.native,
+		Netconf:         true,
+	}
+}
+func (m *mockNetconfSource) NetconfGet(_ context.Context, filter string) ([]byte, error) {
+	m.filter = filter
+	if m.result == nil && m.rawXML == nil {
+		return nil, fmt.Errorf("no mock result")
+	}
+	if m.result != nil {
+		return m.result, nil
+	}
+	return m.rawXML, nil
+}
+func (m *mockNetconfSource) NetconfGetConfig(_ context.Context, datastore, filter string) ([]byte, error) {
+	m.datastore = datastore
+	return m.NetconfGet(context.Background(), filter)
 }
 
 // mockDualSource supports both CLI and gNMI.
@@ -297,6 +344,56 @@ func TestExecuteWithOptions_UnsafeFullFetchRejected(t *testing.T) {
 	_, err := executor.ExecuteWithOptions(context.Background(), src, profiles.OpGetRouteTable, "test-src", query.ExecuteOptions{})
 	if err == nil {
 		t.Fatal("expected unsafe full fetch rejection")
+	}
+}
+
+func TestExecuteWithOptions_NetconfGenericKeyInsertion(t *testing.T) {
+	src := &mockNetconfSource{
+		vendor:   "nokia",
+		platform: "srlinux",
+		native:   true,
+		result:   []byte(`<data/>`),
+	}
+	executor := query.NewExecutor()
+	_, err := executor.ExecuteWithOptions(context.Background(), src, profiles.OpGetRouteTable, "test-src", query.ExecuteOptions{
+		Params: map[string]any{"prefix": "192.0.2.0/24"},
+	})
+	if err != nil {
+		t.Fatalf("ExecuteWithOptions() error: %v", err)
+	}
+	want := `<network-instance xmlns="urn:test"><route-table><route><prefix>192.0.2.0/24</prefix></route></route-table></network-instance>`
+	if src.filter != want {
+		t.Fatalf("NETCONF filter = %q; want %q", src.filter, want)
+	}
+}
+
+func TestExecuteWithOptions_NetconfAmbiguousHighVolumeRejected(t *testing.T) {
+	profiles.RegisterOrReplace(&profiles.Profile{
+		Vendor:   "acme",
+		Platform: "router",
+		Operations: map[string]profiles.OperationDescriptor{
+			profiles.OpGetRouteTable: {
+				OperationID: profiles.OpGetRouteTable,
+				Paths: []profiles.ProtocolPath{
+					{
+						Protocol: profiles.ProtocolNetconfNative,
+						Filter:   `<routes><route/><route/></routes>`,
+						Parameters: []profiles.OperationParameter{
+							{Name: "prefix", PathKey: "prefix", TargetContainer: "route"},
+						},
+						Limits: &profiles.OperationLimits{DefaultCount: 10},
+					},
+				},
+			},
+		},
+	})
+	src := &mockNetconfSource{vendor: "acme", platform: "router", native: true, result: []byte(`<data/>`)}
+	executor := query.NewExecutor()
+	_, err := executor.ExecuteWithOptions(context.Background(), src, profiles.OpGetRouteTable, "test-src", query.ExecuteOptions{
+		Params: map[string]any{"prefix": "192.0.2.0/24"},
+	})
+	if err == nil {
+		t.Fatal("expected ambiguous NETCONF target rejection")
 	}
 }
 
@@ -480,34 +577,6 @@ type bareSource struct{}
 
 func (b *bareSource) SourceType() string             { return "bare" }
 func (b *bareSource) ToConfig() sources.SourceConfig { return nil }
-
-// mockNetconfSource implements SourceIdentity + CapabilityProvider + NetconfQuerier.
-type mockNetconfSource struct {
-	vendor   string
-	platform string
-	ocPaths  bool
-	native   bool
-	rawXML   []byte
-}
-
-func (m *mockNetconfSource) SourceType() string             { return "mock-netconf" }
-func (m *mockNetconfSource) ToConfig() sources.SourceConfig { return nil }
-func (m *mockNetconfSource) DeviceVendor() string           { return m.vendor }
-func (m *mockNetconfSource) DevicePlatform() string         { return m.platform }
-func (m *mockNetconfSource) DeviceVersion() string          { return "" }
-func (m *mockNetconfSource) Capabilities() capabilities.SourceCapabilities {
-	return capabilities.SourceCapabilities{
-		Netconf:         true,
-		OpenConfigPaths: m.ocPaths,
-		NativeYang:      m.native,
-	}
-}
-func (m *mockNetconfSource) NetconfGet(_ context.Context, _ string) ([]byte, error) {
-	return m.rawXML, nil
-}
-func (m *mockNetconfSource) NetconfGetConfig(_ context.Context, _, _ string) ([]byte, error) {
-	return m.rawXML, nil
-}
 
 // --- Phase 2: gNMI normalization tests ---
 

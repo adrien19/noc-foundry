@@ -9,6 +9,7 @@ import (
 	"github.com/adrien19/noc-foundry/internal/embeddingmodels"
 	"github.com/adrien19/noc-foundry/internal/network/capabilities"
 	"github.com/adrien19/noc-foundry/internal/network/models"
+	"github.com/adrien19/noc-foundry/internal/network/profiles"
 	"github.com/adrien19/noc-foundry/internal/network/query"
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/tools"
@@ -21,14 +22,15 @@ var diagSafeRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9/_\-.:@]*$`)
 
 type diagSpec struct {
 	kind        string
+	operationID string
 	description string
 	params      parameters.Parameters
-	command     func(capabilities.SourceIdentity, parameters.ParamValues) (string, string, error)
 }
 
 var diagSpecs = []diagSpec{
 	{
 		kind:        "network-ping",
+		operationID: profiles.OpRunPing,
 		description: "Run a read-only ping from a network device.",
 		params: parameters.Parameters{
 			parameters.NewStringParameter("target", "Target address or hostname."),
@@ -36,10 +38,10 @@ var diagSpecs = []diagSpec{
 			parameters.NewStringParameterWithRequired("vrf", "Optional network instance/VRF.", false),
 			parameters.NewIntParameterWithDefault("count", 5, "Packet count."),
 		},
-		command: buildPingCommand,
 	},
 	{
 		kind:        "network-traceroute",
+		operationID: profiles.OpRunTraceroute,
 		description: "Run a read-only traceroute from a network device.",
 		params: parameters.Parameters{
 			parameters.NewStringParameter("target", "Target address or hostname."),
@@ -47,16 +49,15 @@ var diagSpecs = []diagSpec{
 			parameters.NewStringParameterWithRequired("vrf", "Optional network instance/VRF.", false),
 			parameters.NewIntParameterWithDefault("max_hops", 30, "Maximum hop count."),
 		},
-		command: buildTracerouteCommand,
 	},
 	{
 		kind:        "network-show-config-diff",
+		operationID: profiles.OpGetConfigurationDiff,
 		description: "Show a read-only configuration diff on a network device.",
 		params: parameters.Parameters{
 			parameters.NewStringParameterWithRequired("source", "Source datastore, default running.", false),
 			parameters.NewStringParameterWithRequired("target", "Target datastore, default candidate.", false),
 		},
-		command: buildConfigDiffCommand,
 	},
 }
 
@@ -134,7 +135,7 @@ func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, para
 	if !ok {
 		return nil, util.NewClientServerError("source does not expose device identity", 500, fmt.Errorf("source %q missing identity", t.Source))
 	}
-	command, recordType, err := t.spec.command(identity, params)
+	command, err := t.renderCommand(identity, params)
 	if err != nil {
 		return nil, util.NewClientServerError("invalid diagnostic parameters", 400, err)
 	}
@@ -142,8 +143,30 @@ func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, para
 	if err != nil {
 		return nil, util.NewClientServerError("diagnostic command failed", 500, err)
 	}
-	record.RecordType = recordType
+	record.RecordType = t.spec.operationID
 	return record, nil
+}
+
+func (t Tool) renderCommand(identity capabilities.SourceIdentity, params parameters.ParamValues) (string, error) {
+	values, err := diagnosticValues(t.spec.operationID, params)
+	if err != nil {
+		return "", err
+	}
+	profile, ok := profiles.LookupForDevice(identity.DeviceVendor(), identity.DevicePlatform(), identity.DeviceVersion())
+	if !ok {
+		return "", fmt.Errorf("no profile for %s/%s/%s", identity.DeviceVendor(), identity.DevicePlatform(), identity.DeviceVersion())
+	}
+	template, ok := profile.DiagnosticCommands[t.spec.operationID]
+	if !ok || template.Command == "" {
+		return "", fmt.Errorf("no diagnostic command template for %s on %s/%s", t.spec.operationID, profile.Vendor, profile.Platform)
+	}
+	command := renderDiagTemplate(template.Command, values)
+	for _, fragment := range template.Optional {
+		if values[fragment.Parameter] != "" {
+			command += renderDiagTemplate(fragment.Template, values)
+		}
+	}
+	return command, nil
 }
 
 func (t Tool) Manifest() tools.Manifest          { return t.manifest }
@@ -161,73 +184,76 @@ func (t Tool) EmbedParams(ctx context.Context, paramValues parameters.ParamValue
 	return paramValues, nil
 }
 
-func buildPingCommand(identity capabilities.SourceIdentity, params parameters.ParamValues) (string, string, error) {
-	target, err := requiredSafe(params, "target")
-	if err != nil {
-		return "", "", err
+func diagnosticValues(operationID string, params parameters.ParamValues) (map[string]string, error) {
+	switch operationID {
+	case profiles.OpRunPing:
+		target, err := requiredSafe(params, "target")
+		if err != nil {
+			return nil, err
+		}
+		vrf, err := optionalSafe(params, "vrf")
+		if err != nil {
+			return nil, err
+		}
+		source, err := optionalSafe(params, "source")
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{
+			"target": target,
+			"count":  fmt.Sprint(intParam(params, "count", 5, 1, 100)),
+			"vrf":    vrf,
+			"source": source,
+		}, nil
+	case profiles.OpRunTraceroute:
+		target, err := requiredSafe(params, "target")
+		if err != nil {
+			return nil, err
+		}
+		vrf, err := optionalSafe(params, "vrf")
+		if err != nil {
+			return nil, err
+		}
+		source, err := optionalSafe(params, "source")
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{
+			"target":   target,
+			"max_hops": fmt.Sprint(intParam(params, "max_hops", 30, 1, 255)),
+			"vrf":      vrf,
+			"source":   source,
+		}, nil
+	case profiles.OpGetConfigurationDiff:
+		source, err := optionalSafe(params, "source")
+		if err != nil {
+			return nil, err
+		}
+		if source == "" {
+			source = "running"
+		}
+		target, err := optionalSafe(params, "target")
+		if err != nil {
+			return nil, err
+		}
+		if target == "" {
+			target = "candidate"
+		}
+		if !allowedDatastore(source) || !allowedDatastore(target) {
+			return nil, fmt.Errorf("source and target must be running, candidate, or startup")
+		}
+		return map[string]string{"source": source, "target": target}, nil
+	default:
+		return nil, fmt.Errorf("unsupported diagnostic operation %q", operationID)
 	}
-	count := intParam(params, "count", 5, 1, 100)
-	cmd := fmt.Sprintf("ping %s count %d", target, count)
-	vrf, err := optionalSafe(params, "vrf")
-	if err != nil {
-		return "", "", err
-	}
-	if vrf != "" {
-		cmd += " network-instance " + vrf
-	}
-	source, err := optionalSafe(params, "source")
-	if err != nil {
-		return "", "", err
-	}
-	if source != "" {
-		cmd += " source " + source
-	}
-	return cmd, "run_ping", nil
 }
 
-func buildTracerouteCommand(identity capabilities.SourceIdentity, params parameters.ParamValues) (string, string, error) {
-	target, err := requiredSafe(params, "target")
-	if err != nil {
-		return "", "", err
+func renderDiagTemplate(template string, values map[string]string) string {
+	out := template
+	for k, v := range values {
+		out = strings.ReplaceAll(out, "{"+k+"}", v)
 	}
-	maxHops := intParam(params, "max_hops", 30, 1, 255)
-	cmd := fmt.Sprintf("traceroute %s max-hops %d", target, maxHops)
-	vrf, err := optionalSafe(params, "vrf")
-	if err != nil {
-		return "", "", err
-	}
-	if vrf != "" {
-		cmd += " network-instance " + vrf
-	}
-	source, err := optionalSafe(params, "source")
-	if err != nil {
-		return "", "", err
-	}
-	if source != "" {
-		cmd += " source " + source
-	}
-	return cmd, "run_traceroute", nil
-}
-
-func buildConfigDiffCommand(identity capabilities.SourceIdentity, params parameters.ParamValues) (string, string, error) {
-	source, err := optionalSafe(params, "source")
-	if err != nil {
-		return "", "", err
-	}
-	if source == "" {
-		source = "running"
-	}
-	target, err := optionalSafe(params, "target")
-	if err != nil {
-		return "", "", err
-	}
-	if target == "" {
-		target = "candidate"
-	}
-	if !allowedDatastore(source) || !allowedDatastore(target) {
-		return "", "", fmt.Errorf("source and target must be running, candidate, or startup")
-	}
-	return fmt.Sprintf("show configuration diff %s %s", source, target), "get_configuration_diff", nil
+	return out
 }
 
 func requiredSafe(params parameters.ParamValues, name string) (string, error) {

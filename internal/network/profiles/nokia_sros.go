@@ -21,6 +21,28 @@ func init() {
 	Register(&Profile{
 		Vendor:   "nokia",
 		Platform: "sros",
+		DiagnosticCommands: map[string]DiagnosticCommandTemplate{
+			OpRunPing: {
+				OperationID: OpRunPing,
+				Command:     "ping {target} count {count}",
+				Optional: []DiagnosticCommandFragment{
+					{Parameter: "vrf", Template: " router-instance {vrf}"},
+					{Parameter: "source", Template: " source-address {source}"},
+				},
+			},
+			OpRunTraceroute: {
+				OperationID: OpRunTraceroute,
+				Command:     "traceroute {target} max-ttl {max_hops}",
+				Optional: []DiagnosticCommandFragment{
+					{Parameter: "vrf", Template: " router-instance {vrf}"},
+					{Parameter: "source", Template: " source-address {source}"},
+				},
+			},
+			OpGetConfigurationDiff: {
+				OperationID: OpGetConfigurationDiff,
+				Command:     "show configuration compare {source} {target}",
+			},
+		},
 		Operations: map[string]OperationDescriptor{
 			OpGetInterfaces: {
 				OperationID: OpGetInterfaces,

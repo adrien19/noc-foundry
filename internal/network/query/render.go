@@ -36,7 +36,16 @@ func renderProtocolPath(pp profiles.ProtocolPath, opts ExecuteOptions) (profiles
 		if template := netconfTemplate(pp.Parameters); template != "" {
 			rendered.Filter = renderTemplate(template, values)
 		} else if len(provided) > 0 {
-			rendered.Filter, warnings = addNetconfKeyHints(pp.Filter, pp.Parameters, values, provided)
+			filter, renderWarnings, err := renderNetconfKeys(pp.Filter, pp.Parameters, values, provided)
+			if err != nil {
+				if hasSafetyLimits(pp.Limits) && !opts.AllowUnsafeFullFetch {
+					return pp, nil, err
+				}
+				warnings = append(warnings, err.Error())
+			} else {
+				rendered.Filter = filter
+			}
+			warnings = append(warnings, renderWarnings...)
 		}
 	case profiles.ProtocolCLI:
 		if strings.Contains(rendered.Command, "{") {
@@ -149,22 +158,97 @@ func netconfTemplate(params []profiles.OperationParameter) string {
 	return ""
 }
 
-func addNetconfKeyHints(filter string, params []profiles.OperationParameter, values map[string]string, provided map[string]bool) (string, []string) {
+func renderNetconfKeys(filter string, params []profiles.OperationParameter, values map[string]string, provided map[string]bool) (string, []string, error) {
 	if filter == "" || len(provided) == 0 {
-		return filter, nil
+		return filter, nil, nil
 	}
-	// TODO(schema-ops): Replace comment hints with real subtree predicate
-	// rendering for NETCONF when no netconf_filter_template is declared.
-	// Post-filtering large route/RIB/log/config tables is unsafe; high-volume
-	// NETCONF operations need sidecar templates or schema-aware subtree key
-	// insertion before they are fully Ops-ready on NETCONF-only sources.
-	var hints strings.Builder
+	byContainer := map[string][]string{}
 	for _, p := range params {
-		if provided[p.Name] && p.PathKey != "" {
-			hints.WriteString(fmt.Sprintf("<!-- nocfoundry filter %s=%s -->", p.PathKey, values[p.Name]))
+		if !provided[p.Name] || p.PathKey == "" {
+			continue
+		}
+		container := p.TargetContainer
+		if container == "" {
+			container = containerFromTargetPath(p.TargetPath)
+		}
+		if container == "" {
+			return filter, nil, fmt.Errorf("NETCONF parameter %q cannot be rendered without target_container or target_path", p.Name)
+		}
+		byContainer[container] = append(byContainer[container], fmt.Sprintf("<%s>%s</%s>", p.PathKey, values[p.Name], p.PathKey))
+	}
+	rendered := filter
+	for container, leaves := range byContainer {
+		var err error
+		rendered, err = insertNetconfLeaves(rendered, container, strings.Join(leaves, ""))
+		if err != nil {
+			return filter, nil, err
 		}
 	}
-	return hints.String() + filter, []string{"NETCONF parameter binding could not safely rewrite subtree filter; add netconf_filter_template for exact source-side filtering"}
+	return rendered, []string{"source-side NETCONF filtering used generic subtree key insertion; add netconf_filter_template for exact vendor rendering if this filter does not resolve"}, nil
+}
+
+func containerFromTargetPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	last := parts[len(parts)-1]
+	if idx := strings.Index(last, "["); idx >= 0 {
+		last = last[:idx]
+	}
+	if idx := strings.Index(last, ":"); idx >= 0 {
+		last = last[idx+1:]
+	}
+	return last
+}
+
+func insertNetconfLeaves(filter, container, leaves string) (string, error) {
+	filter = expandSelfClosingNetconfTarget(filter, container)
+	startRe := regexp.MustCompile(`<([A-Za-z_][A-Za-z0-9_.:-]*)(?:\s[^>]*)?>`)
+	matches := startRe.FindAllStringSubmatchIndex(filter, -1)
+	var target []int
+	for _, match := range matches {
+		name := filter[match[2]:match[3]]
+		if localXMLName(name) == container {
+			target = match
+		}
+	}
+	if target == nil {
+		return filter, fmt.Errorf("NETCONF filter target container %q was not found", container)
+	}
+	count := 0
+	for _, match := range matches {
+		name := filter[match[2]:match[3]]
+		if localXMLName(name) == container {
+			count++
+		}
+	}
+	if count != 1 {
+		return filter, fmt.Errorf("NETCONF filter target container %q matched %d elements; add netconf_filter_template", container, count)
+	}
+	insertAt := target[1]
+	return filter[:insertAt] + leaves + filter[insertAt:], nil
+}
+
+func expandSelfClosingNetconfTarget(filter, container string) string {
+	selfCloseRe := regexp.MustCompile(`<([A-Za-z_][A-Za-z0-9_.:-]*)([^>]*)/>`)
+	return selfCloseRe.ReplaceAllStringFunc(filter, func(match string) string {
+		parts := selfCloseRe.FindStringSubmatch(match)
+		if len(parts) < 3 || localXMLName(parts[1]) != container {
+			return match
+		}
+		return "<" + parts[1] + parts[2] + "></" + parts[1] + ">"
+	})
+}
+
+func localXMLName(name string) string {
+	if idx := strings.Index(name, ":"); idx >= 0 {
+		return name[idx+1:]
+	}
+	return name
 }
 
 func renderTemplate(template string, values map[string]string) string {

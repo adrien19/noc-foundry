@@ -158,6 +158,20 @@ type OperationLimits struct {
 	MaxBytes     int
 }
 
+// DiagnosticCommandTemplate describes a vendor/platform-owned read-only
+// command template for CLI/RPC diagnostic operations.
+type DiagnosticCommandTemplate struct {
+	OperationID string
+	Command     string
+	Optional    []DiagnosticCommandFragment
+}
+
+// DiagnosticCommandFragment appends Template only when Parameter is present.
+type DiagnosticCommandFragment struct {
+	Parameter string
+	Template  string
+}
+
 // OutputFormat returns the effective output format, defaulting to "text"
 // when the Format field is empty.
 func (pp ProtocolPath) OutputFormat() string {
@@ -199,10 +213,11 @@ type OperationDescriptor struct {
 // Profile represents a vendor+platform model profile containing
 // the operations it supports and how to execute each one.
 type Profile struct {
-	Vendor     string
-	Platform   string
-	Version    string // optional; empty for unversioned (init()-registered) profiles
-	Operations map[string]OperationDescriptor
+	Vendor             string
+	Platform           string
+	Version            string // optional; empty for unversioned (init()-registered) profiles
+	Operations         map[string]OperationDescriptor
+	DiagnosticCommands map[string]DiagnosticCommandTemplate
 }
 
 // profileKey creates the registry lookup key (version-blind).

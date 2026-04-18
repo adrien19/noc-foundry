@@ -76,12 +76,18 @@ func (cfg Config) Initialize(srcs map[string]sources.Source) (tools.Tool, error)
 	if cfg.SourceSelector != nil {
 		allParameters = append(allParameters, parameters.NewStringParameterWithRequired("device", "Optional device name to query within the source selector.", false))
 	}
+	allParameters = append(allParameters,
+		parameters.NewStringParameterWithRequired("prefix", "Optional route prefix filter.", false),
+		parameters.NewStringParameterWithRequired("protocol", "Optional route protocol filter.", false),
+		parameters.NewStringParameterWithRequired("network_instance", "Optional network instance/VRF filter.", false),
+	)
 	mcpManifest := tools.GetMcpManifest(cfg.Name, desc, cfg.AuthRequired, allParameters, annotations)
 	return Tool{
 		Config:      cfg,
 		executor:    query.NewExecutor(),
 		manifest:    tools.Manifest{Description: desc, Parameters: allParameters.Manifest(), AuthRequired: cfg.AuthRequired},
 		mcpManifest: mcpManifest,
+		Parameters:  allParameters,
 	}, nil
 }
 
@@ -90,13 +96,10 @@ type Tool struct {
 	executor    *query.Executor
 	manifest    tools.Manifest
 	mcpManifest tools.McpManifest
+	Parameters  parameters.Parameters
 }
 
 func (t Tool) Invoke(ctx context.Context, resourceMgr tools.SourceProvider, params parameters.ParamValues, accessToken tools.AccessToken) (any, util.NOCFoundryError) {
-	// TODO(ops-readiness): Route table is high-volume. This tool currently
-	// delegates unscoped execution to the profile path; add parameter-aware
-	// source-side YANG key rendering for prefix/protocol/network_instance before
-	// treating post-filtered route lookup as Ops-ready.
 	return profilequery.Invoke(ctx, resourceMgr, t.executor, t.Source, t.SourceSelector, profiles.OpGetRouteTable, params)
 }
 
@@ -110,7 +113,7 @@ func (t Tool) ToConfig() tools.ToolConfig { return t.Config }
 func (t Tool) GetAuthTokenHeaderName(resourceMgr tools.SourceProvider) (string, error) {
 	return "Authorization", nil
 }
-func (t Tool) GetParameters() parameters.Parameters { return nil }
+func (t Tool) GetParameters() parameters.Parameters { return t.Parameters }
 func (t Tool) EmbedParams(ctx context.Context, paramValues parameters.ParamValues, embeddingModelsMap map[string]embeddingmodels.EmbeddingModel) (parameters.ParamValues, error) {
 	return paramValues, nil
 }

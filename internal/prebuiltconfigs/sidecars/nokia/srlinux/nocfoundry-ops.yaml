@@ -99,8 +99,10 @@ operations:
         allowed: [ipv4-unicast, ipv6-unicast, l2vpn-evpn]
       - name: prefix
         path_key: prefix
-        target_path: rib
+        target_path: route
+        target_container: route
         gnmi_path_template: /srl_nokia-network-instance:network-instance[name={network_instance}]/protocols/srl_nokia-bgp:bgp/rib/afi-safi[afi-safi-name={afi_safi}]/ipv4-unicast/loc-rib/routes/route[prefix={prefix}]
+        netconf_filter_template: <network-instance xmlns="urn:nokia.com:srlinux:general:network-instance"><name>{network_instance}</name><protocols><bgp xmlns="urn:nokia.com:srlinux:bgp:yang:bgp"><rib><afi-safi><afi-safi-name>{afi_safi}</afi-safi-name><ipv4-unicast><loc-rib><routes><route><prefix>{prefix}</prefix></route></routes></loc-rib></ipv4-unicast></afi-safi></rib></bgp></protocols></network-instance>
     limits:
       default_count: 1000
       max_count: 10000
@@ -139,9 +141,12 @@ operations:
       - name: prefix
         path_key: prefix
         target_path: route
+        target_container: route
         gnmi_path_template: /srl_nokia-network-instance:network-instance[name={network_instance}]/route-table/srl_nokia-ip-route-tables:ipv4-unicast/route[prefix={prefix}]
+        netconf_filter_template: <network-instance xmlns="urn:nokia.com:srlinux:general:network-instance"><name>{network_instance}</name><route-table><ipv4-unicast xmlns="urn:nokia.com:srlinux:ip-route-tables"><route><prefix>{prefix}</prefix></route></ipv4-unicast></route-table></network-instance>
       - name: protocol
         path_key: origin-protocol
+        target_container: route
     limits:
       default_count: 1000
       max_count: 10000
