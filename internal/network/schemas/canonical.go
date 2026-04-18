@@ -72,6 +72,19 @@ type OperationCanonicalMap struct {
 	// ContainerAliases lists sub-containers that the mapper should descend
 	// into and merge fields upward (e.g. OpenConfig "state", "config").
 	ContainerAliases []ContainerAlias
+
+	// ChildMappings describe nested child collections/singletons populated
+	// from sub-containers under the parent object.
+	ChildMappings []ChildMapping
+}
+
+// ChildMapping maps a nested source container into a canonical child field.
+type ChildMapping struct {
+	SourceContainer string
+	CanonicalField  string
+	ModelType       string
+	List            bool
+	Fields          []FieldMapping
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +252,64 @@ func registerMinimalCanonicalMaps() {
 	}
 }
 
+func registerBuiltInChildMappings() {
+	addChildMappings("get_acl",
+		ChildMapping{SourceContainer: "entries/entry", CanonicalField: "Entries", ModelType: "ACLEntry", List: true, Fields: []FieldMapping{
+			{YANGLeaf: "sequence", CanonicalField: "Sequence"},
+			{YANGLeaf: "action", CanonicalField: "Action"},
+			{YANGLeaf: "protocol", CanonicalField: "Protocol"},
+			{YANGLeaf: "matched-packets", CanonicalField: "MatchedPackets"},
+			{YANGLeaf: "matched-octets", CanonicalField: "MatchedOctets"},
+		}},
+		ChildMapping{SourceContainer: "acl-entries/acl-entry", CanonicalField: "Entries", ModelType: "ACLEntry", List: true, Fields: []FieldMapping{
+			{YANGLeaf: "sequence-id", CanonicalField: "Sequence"},
+			{YANGLeaf: "forwarding-action", CanonicalField: "Action"},
+			{YANGLeaf: "protocol", CanonicalField: "Protocol"},
+			{YANGLeaf: "matched-packets", CanonicalField: "MatchedPackets"},
+			{YANGLeaf: "matched-octets", CanonicalField: "MatchedOctets"},
+		}},
+	)
+	addChildMappings("get_qos_interfaces",
+		ChildMapping{SourceContainer: "queues/queue", CanonicalField: "Queues", ModelType: "QoSQueue", List: true, Fields: []FieldMapping{
+			{YANGLeaf: "name", CanonicalField: "Name"},
+			{YANGLeaf: "transmit-packets", CanonicalField: "TransmitPackets"},
+			{YANGLeaf: "transmit-octets", CanonicalField: "TransmitOctets"},
+			{YANGLeaf: "dropped-packets", CanonicalField: "DroppedPackets"},
+			{YANGLeaf: "dropped-octets", CanonicalField: "DroppedOctets"},
+		}},
+		ChildMapping{SourceContainer: "schedulers/scheduler", CanonicalField: "Schedulers", ModelType: "QoSScheduler", List: true, Fields: []FieldMapping{
+			{YANGLeaf: "sequence", CanonicalField: "Sequence"},
+			{YANGLeaf: "type", CanonicalField: "Type"},
+			{YANGLeaf: "priority", CanonicalField: "Priority"},
+			{YANGLeaf: "weight", CanonicalField: "Weight"},
+		}},
+	)
+	addChildMappings("get_routing_policy",
+		ChildMapping{SourceContainer: "statements/statement", CanonicalField: "Statements", ModelType: "RoutingPolicyStatement", List: true, Fields: []FieldMapping{
+			{YANGLeaf: "name", CanonicalField: "Name"},
+			{YANGLeaf: "conditions", CanonicalField: "Conditions"},
+			{YANGLeaf: "actions", CanonicalField: "Actions"},
+		}},
+	)
+	addChildMappings("get_lacp",
+		ChildMapping{SourceContainer: "members/member", CanonicalField: "Members", ModelType: "LACPMember", List: true, Fields: []FieldMapping{
+			{YANGLeaf: "port", CanonicalField: "Port"},
+			{YANGLeaf: "activity", CanonicalField: "Activity"},
+			{YANGLeaf: "timeout", CanonicalField: "Timeout"},
+			{YANGLeaf: "aggregatable", CanonicalField: "Aggregatable"},
+			{YANGLeaf: "synchronization", CanonicalField: "Synchronization"},
+		}},
+	)
+}
+
+func addChildMappings(operationID string, children ...ChildMapping) {
+	m, ok := LookupCanonicalMap(operationID)
+	if !ok {
+		return
+	}
+	m.ChildMappings = append(m.ChildMappings, children...)
+}
+
 func defaultFieldMappings(t reflect.Type) []FieldMapping {
 	fields := make([]FieldMapping, 0, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
@@ -266,6 +337,7 @@ func defaultFieldMappings(t reflect.Type) []FieldMapping {
 func init() {
 	registerBuiltInCanonicalModels()
 	registerMinimalCanonicalMaps()
+	registerBuiltInChildMappings()
 
 	// Unified admin-status normalizer covering all known vendor values.
 	RegisterStatusNormalizer("interface_name", func(value string) string {
@@ -377,6 +449,38 @@ func init() {
 		ContainerAliases: []ContainerAlias{
 			{Name: "state", MergeUp: true},  // OpenConfig: interface/state/{admin-status,...}
 			{Name: "config", MergeUp: true}, // OpenConfig: interface/config/{description,...}
+		},
+		ChildMappings: []ChildMapping{
+			{
+				SourceContainer: "state/counters",
+				CanonicalField:  "Counters",
+				ModelType:       "InterfaceCounters",
+				Fields: []FieldMapping{
+					{YANGLeaf: "in-octets", CanonicalField: "InOctets"},
+					{YANGLeaf: "out-octets", CanonicalField: "OutOctets"},
+					{YANGLeaf: "in-pkts", CanonicalField: "InPackets"},
+					{YANGLeaf: "out-pkts", CanonicalField: "OutPackets"},
+					{YANGLeaf: "in-errors", CanonicalField: "InErrors"},
+					{YANGLeaf: "out-errors", CanonicalField: "OutErrors"},
+					{YANGLeaf: "in-discards", CanonicalField: "InDiscards"},
+					{YANGLeaf: "out-discards", CanonicalField: "OutDiscards"},
+				},
+			},
+			{
+				SourceContainer: "counters",
+				CanonicalField:  "Counters",
+				ModelType:       "InterfaceCounters",
+				Fields: []FieldMapping{
+					{YANGLeaf: "in-octets", CanonicalField: "InOctets"},
+					{YANGLeaf: "out-octets", CanonicalField: "OutOctets"},
+					{YANGLeaf: "in-packets", CanonicalField: "InPackets"},
+					{YANGLeaf: "out-packets", CanonicalField: "OutPackets"},
+					{YANGLeaf: "in-errors", CanonicalField: "InErrors"},
+					{YANGLeaf: "out-errors", CanonicalField: "OutErrors"},
+					{YANGLeaf: "in-discards", CanonicalField: "InDiscards"},
+					{YANGLeaf: "out-discards", CanonicalField: "OutDiscards"},
+				},
+			},
 		},
 	})
 

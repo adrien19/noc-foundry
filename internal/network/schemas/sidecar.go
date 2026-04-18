@@ -49,12 +49,16 @@ type SidecarOperation struct {
 // path. Parameters are intentionally declarative so gNMI/NETCONF paths can be
 // rendered from sidecar contracts instead of hardcoded in tool packages.
 type OperationParameter struct {
-	Name        string   `yaml:"name"`
-	PathKey     string   `yaml:"path_key,omitempty"`
-	Default     string   `yaml:"default,omitempty"`
-	Required    bool     `yaml:"required,omitempty"`
-	Allowed     []string `yaml:"allowed,omitempty"`
-	Description string   `yaml:"description,omitempty"`
+	Name                  string   `yaml:"name"`
+	PathKey               string   `yaml:"path_key,omitempty"`
+	TargetPath            string   `yaml:"target_path,omitempty"`
+	TargetContainer       string   `yaml:"target_container,omitempty"`
+	GnmiPathTemplate      string   `yaml:"gnmi_path_template,omitempty"`
+	NetconfFilterTemplate string   `yaml:"netconf_filter_template,omitempty"`
+	Default               string   `yaml:"default,omitempty"`
+	Required              bool     `yaml:"required,omitempty"`
+	Allowed               []string `yaml:"allowed,omitempty"`
+	Description           string   `yaml:"description,omitempty"`
 }
 
 // OperationLimits captures operator-safety defaults for high-volume

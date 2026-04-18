@@ -58,25 +58,26 @@ func ValidateConfig(toolName, kind, source string, selector *SourceSelector, src
 
 // Invoke executes opID against either a single source or a source selector.
 func Invoke(ctx context.Context, resourceMgr tools.SourceProvider, executor *query.Executor, source string, selector *SourceSelector, opID string, params parameters.ParamValues) (any, util.NOCFoundryError) {
+	opts := query.ExecuteOptions{Params: ParamsToMap(params), LimitOverride: limitOverrideFromParams(params)}
 	if source != "" {
-		return invokeSingle(ctx, resourceMgr, executor, source, opID)
+		return invokeSingle(ctx, resourceMgr, executor, source, opID, opts)
 	}
-	return invokeWithSelector(ctx, resourceMgr, executor, selector, opID, params)
+	return invokeWithSelector(ctx, resourceMgr, executor, selector, opID, params, opts)
 }
 
-func invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider, executor *query.Executor, sourceName, opID string) (any, util.NOCFoundryError) {
+func invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider, executor *query.Executor, sourceName, opID string, opts query.ExecuteOptions) (any, util.NOCFoundryError) {
 	rawSource, ok := resourceMgr.GetSource(sourceName)
 	if !ok {
 		return nil, util.NewClientServerError("unable to retrieve source", http.StatusInternalServerError, fmt.Errorf("source %q not found", sourceName))
 	}
-	record, err := executor.Execute(ctx, rawSource, opID, sourceName)
+	record, err := executor.ExecuteWithOptions(ctx, rawSource, opID, sourceName, opts)
 	if err != nil {
 		return nil, util.NewClientServerError(fmt.Sprintf("failed to execute %s operation", opID), http.StatusInternalServerError, err)
 	}
 	return record, nil
 }
 
-func invokeWithSelector(ctx context.Context, resourceMgr tools.SourceProvider, executor *query.Executor, selector *SourceSelector, opID string, params parameters.ParamValues) (any, util.NOCFoundryError) {
+func invokeWithSelector(ctx context.Context, resourceMgr tools.SourceProvider, executor *query.Executor, selector *SourceSelector, opID string, params parameters.ParamValues, opts query.ExecuteOptions) (any, util.NOCFoundryError) {
 	if selector == nil {
 		return nil, util.NewClientServerError("missing source selector", http.StatusInternalServerError, fmt.Errorf("sourceSelector is nil"))
 	}
@@ -103,7 +104,7 @@ func invokeWithSelector(ctx context.Context, resourceMgr tools.SourceProvider, e
 
 	if deviceName != "" {
 		for sn := range filterByDevice(srcs, deviceName) {
-			return invokeSingle(ctx, resourceMgr, executor, sn, opID)
+			return invokeSingle(ctx, resourceMgr, executor, sn, opID, opts)
 		}
 		return nil, util.NewClientServerError(fmt.Sprintf("device %q not found among matched sources", deviceName), http.StatusNotFound, fmt.Errorf("device %q not in selector results", deviceName))
 	}
@@ -121,8 +122,32 @@ func invokeWithSelector(ctx context.Context, resourceMgr tools.SourceProvider, e
 		if !ok {
 			return nil, fmt.Errorf("source %q not found", sourceName)
 		}
-		return executor.Execute(ctx, rawSource, opID, sourceName)
+		return executor.ExecuteWithOptions(ctx, rawSource, opID, sourceName, opts)
 	}), nil
+}
+
+// ParamsToMap converts MCP parameter values into ExecuteOptions params.
+func ParamsToMap(params parameters.ParamValues) map[string]any {
+	out := make(map[string]any, len(params))
+	for _, p := range params {
+		if p.Value != nil {
+			out[p.Name] = p.Value
+		}
+	}
+	return out
+}
+
+func limitOverrideFromParams(params parameters.ParamValues) *query.LimitOverride {
+	for _, p := range params {
+		if p.Name != "count" || p.Value == nil {
+			continue
+		}
+		var count int
+		if _, err := fmt.Sscan(fmt.Sprint(p.Value), &count); err == nil && count > 0 {
+			return &query.LimitOverride{Count: count}
+		}
+	}
+	return nil
 }
 
 func paramString(params parameters.ParamValues, name string) string {

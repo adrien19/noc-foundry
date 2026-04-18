@@ -99,6 +99,8 @@ operations:
         allowed: [ipv4-unicast, ipv6-unicast, l2vpn-evpn]
       - name: prefix
         path_key: prefix
+        target_path: rib
+        gnmi_path_template: /srl_nokia-network-instance:network-instance[name={network_instance}]/protocols/srl_nokia-bgp:bgp/rib/afi-safi[afi-safi-name={afi_safi}]/ipv4-unicast/loc-rib/routes/route[prefix={prefix}]
     limits:
       default_count: 1000
       max_count: 10000
@@ -136,6 +138,8 @@ operations:
         default: default
       - name: prefix
         path_key: prefix
+        target_path: route
+        gnmi_path_template: /srl_nokia-network-instance:network-instance[name={network_instance}]/route-table/srl_nokia-ip-route-tables:ipv4-unicast/route[prefix={prefix}]
       - name: protocol
         path_key: origin-protocol
     limits:

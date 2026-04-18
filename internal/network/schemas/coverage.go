@@ -31,6 +31,7 @@ type OperationCoverage struct {
 	CanonicalModelPresent bool     `json:"canonical_model_present"`
 	CLIParsers            []string `json:"cli_parsers,omitempty"`
 	DedicatedToolPresent  bool     `json:"dedicated_tool_present"`
+	Readiness             string   `json:"readiness"`
 	SidecarOrigin         string   `json:"sidecar_origin,omitempty"`
 }
 
@@ -98,12 +99,26 @@ func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageR
 				coverage.CLIParsers = append(coverage.CLIParsers, format)
 			}
 		}
+		coverage.Readiness = readinessForCoverage(coverage)
 		report.Operations = append(report.Operations, coverage)
 	}
 	// TODO(schema-coverage): Expose CoverageReport through an operator-facing
 	// debug/readiness tool so NOC users can inspect missing mappings without
 	// reading startup logs.
 	return report
+}
+
+func readinessForCoverage(c OperationCoverage) string {
+	if len(c.Protocols) == 0 {
+		return "registered"
+	}
+	if !c.CanonicalMapPresent || !c.CanonicalModelPresent {
+		return "schema-ready"
+	}
+	if c.DedicatedToolPresent {
+		return "tool-ready"
+	}
+	return "canonical-ready"
 }
 
 func warningsByOperation(warnings []string) map[string][]string {

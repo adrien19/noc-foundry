@@ -17,6 +17,8 @@ package schemas
 import (
 	"strings"
 	"sync"
+
+	"github.com/adrien19/noc-foundry/internal/network/profiles"
 )
 
 // OperationDataKind describes what kind of data an operation retrieves.
@@ -52,6 +54,51 @@ type OperationMapping struct {
 	Limits      *OperationLimits
 	NativePaths []string
 	OCPaths     []string
+}
+
+func (m OperationMapping) profileParameters() []profiles.OperationParameter {
+	out := make([]profiles.OperationParameter, 0, len(m.Parameters))
+	for _, p := range m.Parameters {
+		out = append(out, profiles.OperationParameter{
+			Name:                  p.Name,
+			PathKey:               p.PathKey,
+			TargetPath:            p.TargetPath,
+			TargetContainer:       p.TargetContainer,
+			GnmiPathTemplate:      p.GnmiPathTemplate,
+			NetconfFilterTemplate: p.NetconfFilterTemplate,
+			Default:               p.Default,
+			Required:              p.Required,
+			Allowed:               p.Allowed,
+			Description:           p.Description,
+		})
+	}
+	return out
+}
+
+func (m OperationMapping) profileLimits() *profiles.OperationLimits {
+	if m.Limits == nil {
+		return nil
+	}
+	return &profiles.OperationLimits{
+		DefaultCount: m.Limits.DefaultCount,
+		MaxCount:     m.Limits.MaxCount,
+		MaxBytes:     m.Limits.MaxBytes,
+	}
+}
+
+func (m OperationMapping) profileDataKind() profiles.OperationDataKind {
+	switch m.dataKind() {
+	case OperationDataConfig:
+		return profiles.OperationDataConfig
+	case OperationDataConfigState:
+		return profiles.OperationDataConfigState
+	case OperationDataRPC:
+		return profiles.OperationDataRPC
+	case OperationDataRaw:
+		return profiles.OperationDataRaw
+	default:
+		return profiles.OperationDataState
+	}
 }
 
 func (m OperationMapping) dataKind() OperationDataKind {

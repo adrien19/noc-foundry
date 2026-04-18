@@ -180,6 +180,12 @@ func (e *Executor) ExecuteCommand(ctx context.Context, source sources.Source, co
 // Execute runs the named operation against the given source, routing
 // through protocol paths in preference order and returning a canonical Record.
 func (e *Executor) Execute(ctx context.Context, source sources.Source, operationID string, sourceID string) (*models.Record, error) {
+	return e.ExecuteWithOptions(ctx, source, operationID, sourceID, ExecuteOptions{})
+}
+
+// ExecuteWithOptions runs the named operation with runtime parameters and
+// safety controls used for source-side filtering and limit enforcement.
+func (e *Executor) ExecuteWithOptions(ctx context.Context, source sources.Source, operationID string, sourceID string, opts ExecuteOptions) (*models.Record, error) {
 	// Resolve source identity for profile lookup.
 	identity, ok := source.(capabilities.SourceIdentity)
 	if !ok {
@@ -212,10 +218,18 @@ func (e *Executor) Execute(ctx context.Context, source sources.Source, operation
 			continue
 		}
 
-		record, err := executePath(ctx, e, source, pp, operationID, sourceID, vendor, platform, version)
+		rendered, renderWarnings, err := renderProtocolPath(pp, opts)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		record, err := executePath(ctx, e, source, rendered, operationID, sourceID, vendor, platform, version, opts)
 		if err != nil {
 			lastErr = err
 			continue // try next protocol
+		}
+		for _, warning := range renderWarnings {
+			appendQualityWarning(&record.Quality, warning)
 		}
 		return record, nil
 	}
@@ -236,23 +250,23 @@ func getCapabilities(source sources.Source) capabilities.SourceCapabilities {
 }
 
 // executePath runs a single protocol path and returns a canonical Record.
-func executePath(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string) (*models.Record, error) {
+func executePath(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, opts ExecuteOptions) (*models.Record, error) {
 	collectedAt := time.Now()
 
 	switch pp.Protocol {
 	case profiles.ProtocolGnmiOpenConfig, profiles.ProtocolGnmiNative:
-		return executeGnmi(ctx, e, source, pp, operationID, sourceID, vendor, platform, version, collectedAt)
+		return executeGnmi(ctx, e, source, pp, operationID, sourceID, vendor, platform, version, collectedAt, opts)
 	case profiles.ProtocolCLI:
-		return executeCLI(ctx, e, source, pp, operationID, sourceID, vendor, platform, collectedAt)
+		return executeCLI(ctx, e, source, pp, operationID, sourceID, vendor, platform, collectedAt, opts)
 	case profiles.ProtocolNetconfOpenConfig, profiles.ProtocolNetconfNative:
-		return executeNetconf(ctx, e, source, pp, operationID, sourceID, vendor, platform, version, collectedAt)
+		return executeNetconf(ctx, e, source, pp, operationID, sourceID, vendor, platform, version, collectedAt, opts)
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q", pp.Protocol)
 	}
 }
 
 // executeGnmi runs a gNMI Get RPC and normalizes the response.
-func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, collectedAt time.Time) (*models.Record, error) {
+func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, collectedAt time.Time, opts ExecuteOptions) (*models.Record, error) {
 	querier, ok := source.(capabilities.GnmiQuerier)
 	if !ok {
 		return nil, fmt.Errorf("source %q does not implement GnmiQuerier", sourceID)
@@ -285,6 +299,7 @@ func executeGnmi(ctx context.Context, e *Executor, source sources.Source, pp pro
 			quality = models.QualityMeta{MappingQuality: models.MappingDerived}
 		}
 	}
+	payload, quality = enforceLimits(payload, quality, pp.Limits, opts.LimitOverride)
 
 	return &models.Record{
 		RecordType:    operationID,
@@ -347,7 +362,7 @@ func enrichNativeMeta(e *Executor, vendor, platform, version string, paths []str
 }
 
 // executeCLI runs a CLI command and normalizes the response.
-func executeCLI(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string, collectedAt time.Time) (*models.Record, error) {
+func executeCLI(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform string, collectedAt time.Time, opts ExecuteOptions) (*models.Record, error) {
 	runner, ok := source.(capabilities.CommandRunner)
 	if !ok {
 		return nil, fmt.Errorf("source %q does not implement CommandRunner", sourceID)
@@ -407,6 +422,7 @@ func executeCLI(ctx context.Context, e *Executor, source sources.Source, pp prof
 			return nil, fmt.Errorf("CLI output parse failed for operation %q: %w", operationID, perr)
 		}
 	}
+	payload, quality = enforceLimits(payload, quality, pp.Limits, opts.LimitOverride)
 
 	return &models.Record{
 		RecordType:    operationID,

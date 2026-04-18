@@ -167,7 +167,7 @@ type xmlNCSROSSystemState struct {
 // and returns a canonical Record. UseGetConfig selects <get-config> (config
 // data only); the default <get> retrieves both configuration and state data,
 // which is required for operational metrics such as admin/oper status.
-func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, collectedAt time.Time) (*models.Record, error) {
+func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp profiles.ProtocolPath, operationID, sourceID, vendor, platform, version string, collectedAt time.Time, opts ExecuteOptions) (*models.Record, error) {
 	querier, ok := source.(capabilities.NetconfQuerier)
 	if !ok {
 		return nil, fmt.Errorf("source %q does not implement NetconfQuerier", sourceID)
@@ -211,6 +211,7 @@ func executeNetconf(ctx context.Context, e *Executor, source sources.Source, pp 
 			quality = models.QualityMeta{MappingQuality: models.MappingDerived}
 		}
 	}
+	payload, quality = enforceLimits(payload, quality, pp.Limits, opts.LimitOverride)
 
 	return &models.Record{
 		RecordType:    operationID,

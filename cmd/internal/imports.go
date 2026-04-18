@@ -29,23 +29,21 @@ import (
 	_ "github.com/adrien19/noc-foundry/internal/tools/common/validate"
 	_ "github.com/adrien19/noc-foundry/internal/tools/common/validationruns"
 	_ "github.com/adrien19/noc-foundry/internal/tools/http"
+	_ "github.com/adrien19/noc-foundry/internal/tools/network/diagnostictools"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/listdevices"
+	_ "github.com/adrien19/noc-foundry/internal/tools/network/profiletools"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/query"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/show"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showalarms"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showbgpneighbors"
+	_ "github.com/adrien19/noc-foundry/internal/tools/network/showcoverage"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showinterfaces"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showroutes"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showversion"
-	// TODO(ops-readiness): Register the remaining dedicated operation tools
-	// here after their packages are implemented with the profilequery helper:
-	// network-show-lldp, network-show-bgp-routes, network-show-ospf-neighbors,
-	// network-show-isis-adjacencies, network-show-platform, network-show-optics,
-	// network-show-acl, network-show-qos, network-show-routing-policy,
-	// network-show-logs, network-show-config, network-ping, network-traceroute,
-	// network-show-config-diff, network-show-topology, and network-compare.
-	// Their packages must invoke operation IDs only; YANG paths remain in
-	// sidecars/schema-derived profiles.
+	// TODO(ops-readiness): Add network-show-topology and network-compare after
+	// LLDP/tool coverage has confidence/evidence semantics and fleet fanout can
+	// return structured per-device partial results instead of failing whole
+	// aggregations.
 	_ "github.com/adrien19/noc-foundry/internal/tools/utility/wait"
 
 	// Import source packages for side effect of registration

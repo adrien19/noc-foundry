@@ -119,6 +119,43 @@ type ProtocolPath struct {
 	// Datastore is the NETCONF source datastore for GetConfig RPCs.
 	// Valid values: "running" (default), "candidate", "startup".
 	Datastore string
+	// Operation metadata copied from the sidecar/profile contract. Execution
+	// uses these fields for parameter-aware path rendering and safety limits.
+	Parameters []OperationParameter
+	Limits     *OperationLimits
+}
+
+// OperationDataKind describes what kind of data an operation retrieves.
+type OperationDataKind string
+
+const (
+	OperationDataState       OperationDataKind = "state"
+	OperationDataConfig      OperationDataKind = "config"
+	OperationDataConfigState OperationDataKind = "config_state"
+	OperationDataRPC         OperationDataKind = "rpc"
+	OperationDataRaw         OperationDataKind = "raw"
+)
+
+// OperationParameter describes one runtime parameter accepted by a
+// profile-routed operation.
+type OperationParameter struct {
+	Name                  string
+	PathKey               string
+	TargetPath            string
+	TargetContainer       string
+	GnmiPathTemplate      string
+	NetconfFilterTemplate string
+	Default               string
+	Required              bool
+	Allowed               []string
+	Description           string
+}
+
+// OperationLimits captures operator-safety defaults for large operations.
+type OperationLimits struct {
+	DefaultCount int
+	MaxCount     int
+	MaxBytes     int
 }
 
 // OutputFormat returns the effective output format, defaulting to "text"
@@ -152,6 +189,10 @@ func (pp ProtocolPath) CanExecute(caps capabilities.SourceCapabilities) bool {
 // on a given device profile, with protocol paths in preference order.
 type OperationDescriptor struct {
 	OperationID string
+	Data        OperationDataKind
+	Datastore   string
+	Parameters  []OperationParameter
+	Limits      *OperationLimits
 	Paths       []ProtocolPath // ordered by preference (best first)
 }
 

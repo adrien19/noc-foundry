@@ -36,7 +36,8 @@ type SchemaMapper struct {
 	// fieldIndex maps YANGLeaf → FieldMapping for O(1) lookup during walk.
 	fieldIndex map[string]FieldMapping
 	// aliasSet contains container names that should be merged upward.
-	aliasSet map[string]bool
+	aliasSet      map[string]bool
+	childMappings []ChildMapping
 }
 
 // NewSchemaMapper creates a mapper for the given operation and schema bundle.
@@ -60,10 +61,11 @@ func NewSchemaMapper(bundle *SchemaBundle, operationID string) (*SchemaMapper, e
 	}
 
 	return &SchemaMapper{
-		bundle:     bundle,
-		cmap:       cmap,
-		fieldIndex: fieldIndex,
-		aliasSet:   aliasSet,
+		bundle:        bundle,
+		cmap:          cmap,
+		fieldIndex:    fieldIndex,
+		aliasSet:      aliasSet,
+		childMappings: cmap.ChildMappings,
 	}, nil
 }
 
@@ -151,10 +153,80 @@ func (m *SchemaMapper) extractGeneric(data map[string]any, modelType reflect.Typ
 			mapped = true
 		}
 	}
+	for _, child := range m.childMappings {
+		if setChildMapping(value, data, child) {
+			mapped = true
+		}
+	}
 
 	if len(extensions) > 0 {
 		if field := value.FieldByName("VendorExtensions"); field.IsValid() && field.CanSet() && field.Kind() == reflect.Map {
 			field.Set(reflect.ValueOf(extensions))
+		}
+	}
+	return value, mapped
+}
+
+func setChildMapping(parent reflect.Value, data map[string]any, child ChildMapping) bool {
+	field := parent.FieldByName(child.CanonicalField)
+	if !field.IsValid() || !field.CanSet() {
+		return false
+	}
+	raw, ok := findNestedValue(data, child.SourceContainer)
+	if !ok || raw == nil {
+		return false
+	}
+	modelType, ok := modelTypeByName(child.ModelType)
+	if !ok {
+		return false
+	}
+	items := rawToMapSlice(raw)
+	if child.List {
+		slice := reflect.MakeSlice(reflect.SliceOf(modelType), 0, len(items))
+		for _, item := range items {
+			v, mapped := mapChildItem(item, modelType, child.Fields)
+			if mapped {
+				slice = reflect.Append(slice, v)
+			}
+		}
+		if slice.Len() == 0 {
+			return false
+		}
+		field.Set(slice)
+		return true
+	}
+	if len(items) == 0 {
+		return false
+	}
+	v, mapped := mapChildItem(items[0], modelType, child.Fields)
+	if !mapped {
+		return false
+	}
+	if field.Kind() == reflect.Pointer {
+		ptr := reflect.New(modelType)
+		ptr.Elem().Set(v)
+		field.Set(ptr)
+		return true
+	}
+	field.Set(v)
+	return true
+}
+
+func mapChildItem(data map[string]any, modelType reflect.Type, fields []FieldMapping) (reflect.Value, bool) {
+	value := reflect.New(modelType).Elem()
+	mapped := false
+	index := map[string]FieldMapping{}
+	for _, f := range fields {
+		index[f.YANGLeaf] = f
+	}
+	flat := flattenKnownContainers(data, map[string]bool{"state": true, "config": true, "counters": true})
+	for key, raw := range flat {
+		fm, ok := index[key]
+		if !ok {
+			continue
+		}
+		if setModelField(value, fm, raw) {
+			mapped = true
 		}
 	}
 	return value, mapped
@@ -510,6 +582,88 @@ func toMapSlice(items []any) []map[string]any {
 		}
 	}
 	return result
+}
+
+func rawToMapSlice(raw any) []map[string]any {
+	switch v := raw.(type) {
+	case []any:
+		return toMapSlice(v)
+	case []map[string]any:
+		return v
+	case map[string]any:
+		return []map[string]any{v}
+	default:
+		return nil
+	}
+}
+
+func findNestedValue(data map[string]any, path string) (any, bool) {
+	if path == "" {
+		return nil, false
+	}
+	parts := strings.Split(path, "/")
+	var current any = data
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		next, ok := m[part]
+		if !ok {
+			return nil, false
+		}
+		current = next
+	}
+	return current, true
+}
+
+func flattenKnownContainers(data map[string]any, aliases map[string]bool) map[string]any {
+	flat := make(map[string]any, len(data))
+	for k, v := range data {
+		if aliases[k] {
+			continue
+		}
+		if isScalar(v) {
+			flat[k] = v
+		}
+	}
+	for k, v := range data {
+		if !aliases[k] {
+			continue
+		}
+		if sub, ok := v.(map[string]any); ok {
+			for sk, sv := range sub {
+				if isScalar(sv) {
+					flat[sk] = sv
+				}
+			}
+		}
+	}
+	return flat
+}
+
+func modelTypeByName(name string) (reflect.Type, bool) {
+	switch name {
+	case "InterfaceCounters":
+		return reflect.TypeOf(models.InterfaceCounters{}), true
+	case "LACPMember":
+		return reflect.TypeOf(models.LACPMember{}), true
+	case "ACLEntry":
+		return reflect.TypeOf(models.ACLEntry{}), true
+	case "ACLInterface":
+		return reflect.TypeOf(models.ACLInterface{}), true
+	case "QoSQueue":
+		return reflect.TypeOf(models.QoSQueue{}), true
+	case "QoSScheduler":
+		return reflect.TypeOf(models.QoSScheduler{}), true
+	case "RoutingPolicyStatement":
+		return reflect.TypeOf(models.RoutingPolicyStatement{}), true
+	default:
+		return nil, false
+	}
 }
 
 func isScalar(v any) bool {

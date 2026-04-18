@@ -36,16 +36,6 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 	ops := make(map[string]profiles.OperationDescriptor)
 
 	for _, m := range mappings {
-		// TODO(schema-ops): Render parameterized path keys from m.Parameters at
-		// invocation time. High-volume operations such as get_route_table and
-		// get_bgp_rib must avoid full-table fetches when prefix, afi_safi, or
-		// network_instance parameters are supplied. Today BuildProfile records
-		// unbound paths and operator-safety limits; query execution still needs a
-		// parameter-aware path renderer before those tools are fully Ops-ready.
-		if len(m.Parameters) > 0 {
-			warnings = append(warnings, fmt.Sprintf("operation %s: parameter bindings declared but invocation-time YANG path rendering is not implemented yet", m.OperationID))
-		}
-
 		// Collect resolved paths by protocol, combining gNMI paths and
 		// NETCONF filters so each protocol appears as a single ProtocolPath.
 		var ocGnmiPaths []string
@@ -106,6 +96,8 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 		}
 
 		for proto, pp := range byProtocol {
+			pp.Parameters = m.profileParameters()
+			pp.Limits = m.profileLimits()
 			if isNetconfProtocol(proto) && m.dataKind() == OperationDataConfig {
 				pp.UseGetConfig = true
 				pp.Datastore = m.datastore()
@@ -125,6 +117,10 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 		if len(paths) > 0 {
 			ops[m.OperationID] = profiles.OperationDescriptor{
 				OperationID: m.OperationID,
+				Data:        m.profileDataKind(),
+				Datastore:   m.datastore(),
+				Parameters:  m.profileParameters(),
+				Limits:      m.profileLimits(),
 				Paths:       paths,
 			}
 		} else {
@@ -139,6 +135,15 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 	}
 
 	return profile, warnings
+}
+
+func hasRequiredParameters(params []OperationParameter) bool {
+	for _, p := range params {
+		if p.Required {
+			return true
+		}
+	}
+	return false
 }
 
 func orderedProtocolPaths(m OperationMapping, byProtocol map[profiles.Protocol]profiles.ProtocolPath) []profiles.ProtocolPath {

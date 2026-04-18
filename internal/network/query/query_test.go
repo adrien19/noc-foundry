@@ -57,6 +57,23 @@ func TestMain(m *testing.M) {
 					{Protocol: profiles.ProtocolCLI, Command: "show version", Format: "text"},
 				},
 			},
+			profiles.OpGetRouteTable: {
+				OperationID: profiles.OpGetRouteTable,
+				Parameters: []profiles.OperationParameter{
+					{Name: "prefix", PathKey: "prefix", GnmiPathTemplate: "/routes/route[prefix={prefix}]"},
+				},
+				Limits: &profiles.OperationLimits{DefaultCount: 1, MaxCount: 2},
+				Paths: []profiles.ProtocolPath{
+					{
+						Protocol: profiles.ProtocolGnmiNative,
+						Paths:    []string{"/routes/route"},
+						Parameters: []profiles.OperationParameter{
+							{Name: "prefix", PathKey: "prefix", GnmiPathTemplate: "/routes/route[prefix={prefix}]"},
+						},
+						Limits: &profiles.OperationLimits{DefaultCount: 1, MaxCount: 2},
+					},
+				},
+			},
 		},
 	})
 	os.Exit(m.Run())
@@ -94,6 +111,7 @@ type mockGnmiSource struct {
 	ocPaths  bool
 	native   bool
 	result   *capabilities.GnmiGetResult
+	paths    []string
 }
 
 func (m *mockGnmiSource) SourceType() string             { return "mock-gnmi" }
@@ -109,7 +127,8 @@ func (m *mockGnmiSource) Capabilities() capabilities.SourceCapabilities {
 		CLI:             false,
 	}
 }
-func (m *mockGnmiSource) GnmiGet(_ context.Context, _ []string, _ string) (*capabilities.GnmiGetResult, error) {
+func (m *mockGnmiSource) GnmiGet(_ context.Context, paths []string, _ string) (*capabilities.GnmiGetResult, error) {
+	m.paths = paths
 	if m.result == nil {
 		return nil, fmt.Errorf("no mock result")
 	}
@@ -229,6 +248,55 @@ System Type       : 7220 IXR-D2`,
 	}
 	if sv.SoftwareVersion != "v24.3.2" {
 		t.Errorf("SoftwareVersion = %q, want %q", sv.SoftwareVersion, "v24.3.2")
+	}
+}
+
+func TestExecuteWithOptions_GnmiTemplateAndLimit(t *testing.T) {
+	raw := json.RawMessage(`{"route":[
+		{"prefix":"192.0.2.0/24","next-hop":"10.0.0.1","active":true},
+		{"prefix":"198.51.100.0/24","next-hop":"10.0.0.2","active":true}
+	]}`)
+	src := &mockGnmiSource{
+		vendor:   "nokia",
+		platform: "srlinux",
+		native:   true,
+		result: &capabilities.GnmiGetResult{Notifications: []capabilities.GnmiNotification{
+			{Path: "/routes/route", Value: raw},
+		}},
+	}
+	executor := query.NewExecutor()
+	record, err := executor.ExecuteWithOptions(context.Background(), src, profiles.OpGetRouteTable, "test-src", query.ExecuteOptions{
+		Params: map[string]any{"prefix": "192.0.2.0/24"},
+	})
+	if err != nil {
+		t.Fatalf("ExecuteWithOptions() error: %v", err)
+	}
+	if got, want := src.paths[0], "/routes/route[prefix=192.0.2.0/24]"; got != want {
+		t.Fatalf("gNMI path = %q; want %q", got, want)
+	}
+	routes, ok := record.Payload.([]models.Route)
+	if !ok {
+		t.Fatalf("payload type = %T; want []models.Route", record.Payload)
+	}
+	if len(routes) != 1 {
+		t.Fatalf("routes after limit = %d; want 1", len(routes))
+	}
+	if len(record.Quality.Warnings) == 0 {
+		t.Fatal("expected truncation warning")
+	}
+}
+
+func TestExecuteWithOptions_UnsafeFullFetchRejected(t *testing.T) {
+	src := &mockGnmiSource{
+		vendor:   "nokia",
+		platform: "srlinux",
+		native:   true,
+		result:   &capabilities.GnmiGetResult{},
+	}
+	executor := query.NewExecutor()
+	_, err := executor.ExecuteWithOptions(context.Background(), src, profiles.OpGetRouteTable, "test-src", query.ExecuteOptions{})
+	if err == nil {
+		t.Fatal("expected unsafe full fetch rejection")
 	}
 }
 
