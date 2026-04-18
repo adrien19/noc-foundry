@@ -14,7 +14,30 @@
 
 package schemas
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
+
+// OperationDataKind describes what kind of data an operation retrieves.
+// It lets schema-derived profile generation choose the correct NETCONF RPC
+// and lets tools apply operator-safety limits for large or raw operations.
+type OperationDataKind string
+
+const (
+	OperationDataState       OperationDataKind = "state"
+	OperationDataConfig      OperationDataKind = "config"
+	OperationDataConfigState OperationDataKind = "config_state"
+	OperationDataRPC         OperationDataKind = "rpc"
+	OperationDataRaw         OperationDataKind = "raw"
+)
+
+func (k OperationDataKind) withDefault() OperationDataKind {
+	if k == "" {
+		return OperationDataState
+	}
+	return k
+}
 
 // OperationMapping defines the mapping from a well-known operation ID
 // to the YANG paths used to resolve that operation against a compiled
@@ -22,20 +45,46 @@ import "sync"
 // OpenConfig paths.
 type OperationMapping struct {
 	OperationID string
+	Data        OperationDataKind
+	Datastore   string
+	Preferred   []string
+	Parameters  []OperationParameter
+	Limits      *OperationLimits
 	NativePaths []string
 	OCPaths     []string
 }
 
+func (m OperationMapping) dataKind() OperationDataKind {
+	return m.Data.withDefault()
+}
+
+func (m OperationMapping) datastore() string {
+	if strings.TrimSpace(m.Datastore) != "" {
+		return m.Datastore
+	}
+	if m.dataKind() == OperationDataConfig {
+		return "running"
+	}
+	return ""
+}
+
 // NokiaSRLinuxMappings defines the YANG path mappings for Nokia SR Linux
 // devices. These paths are validated against the loaded schema at startup.
+//
+// TODO(schema-ops): Prefer the prebuilt or repo-provided nocfoundry-ops.yaml
+// sidecar for Nokia SR Linux operation mappings. This hardcoded fallback is
+// only for deployments without a sidecar and should not grow as the primary
+// mapping mechanism; new vendors should ship sidecars or configure opsFile.
 var NokiaSRLinuxMappings = []OperationMapping{
 	{
 		OperationID: "get_interfaces",
+		Data:        OperationDataState,
 		NativePaths: []string{"/srl_nokia-interfaces:interface"},
 		OCPaths:     []string{"/openconfig-interfaces:interfaces/interface"},
 	},
 	{
 		OperationID: "get_system_version",
+		Data:        OperationDataState,
 		NativePaths: []string{
 			"/srl_nokia-system:system/information",
 			"/srl_nokia-system:system/name",
@@ -44,23 +93,92 @@ var NokiaSRLinuxMappings = []OperationMapping{
 			"/openconfig-system:system/state",
 		},
 	},
+	{
+		OperationID: "get_bgp_neighbors",
+		Data:        OperationDataState,
+		NativePaths: []string{
+			"/srl_nokia-network-instance:network-instance/protocols/srl_nokia-bgp:bgp/neighbor",
+		},
+		OCPaths: []string{
+			"/openconfig-network-instance:network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state",
+		},
+	},
+	{
+		OperationID: "get_route_table",
+		Data:        OperationDataState,
+		Limits:      &OperationLimits{DefaultCount: 1000, MaxCount: 10000},
+		NativePaths: []string{
+			"/srl_nokia-network-instance:network-instance/route-table/srl_nokia-ip-route-tables:ipv4-unicast/route",
+		},
+		OCPaths: []string{
+			"/openconfig-network-instance:network-instances/network-instance/afts/ipv4-unicast/ipv4-entry",
+		},
+	},
+	{
+		OperationID: "get_system_alarms",
+		Data:        OperationDataState,
+		NativePaths: []string{
+			"/srl_nokia-system:system/srl_nokia-system-alarm:alarm",
+		},
+		OCPaths: []string{
+			"/openconfig-system:system/alarms/alarm/state",
+		},
+	},
 }
 
 // NokiaSROSMappings defines the YANG path mappings for Nokia SR OS
 // (7x50) devices.
+//
+// TODO(schema-ops): Replace this fallback with a prebuilt SR OS sidecar once
+// SR OS native YANG operation contracts have been validated. Hardcoded YANG
+// fallbacks are a compatibility safety net, while sidecars/opsFile are the
+// intended source of truth.
 var NokiaSROSMappings = []OperationMapping{
 	{
 		OperationID: "get_interfaces",
+		Data:        OperationDataState,
 		NativePaths: []string{"/nokia-state:state/port"},
 		OCPaths:     []string{"/openconfig-interfaces:interfaces/interface"},
 	},
 	{
 		OperationID: "get_system_version",
+		Data:        OperationDataState,
 		NativePaths: []string{
 			"/nokia-state:state/system/information",
 		},
 		OCPaths: []string{
 			"/openconfig-system:system/state",
+		},
+	},
+	{
+		OperationID: "get_bgp_neighbors",
+		Data:        OperationDataState,
+		NativePaths: []string{
+			"/nokia-state:state/router/bgp/neighbor",
+		},
+		OCPaths: []string{
+			"/openconfig-network-instance:network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state",
+		},
+	},
+	{
+		OperationID: "get_route_table",
+		Data:        OperationDataState,
+		Limits:      &OperationLimits{DefaultCount: 1000, MaxCount: 10000},
+		NativePaths: []string{
+			"/nokia-state:state/router/route-table/unicast/ipv4",
+		},
+		OCPaths: []string{
+			"/openconfig-network-instance:network-instances/network-instance/afts/ipv4-unicast/ipv4-entry",
+		},
+	},
+	{
+		OperationID: "get_system_alarms",
+		Data:        OperationDataState,
+		NativePaths: []string{
+			"/nokia-state:state/system/alarm",
+		},
+		OCPaths: []string{
+			"/openconfig-system:system/alarms/alarm/state",
 		},
 	},
 }

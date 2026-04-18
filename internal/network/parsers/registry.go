@@ -71,3 +71,13 @@ func Dispatch(key ParserKey, raw string) (any, models.QualityMeta, error) {
 	}
 	return fn(raw)
 }
+
+// HasParser reports whether a CLI parser has been registered for key. It is
+// used by schema operation coverage diagnostics; query execution still uses
+// Dispatch so missing parsers degrade to raw/partial output.
+func HasParser(key ParserKey) bool {
+	parserMu.RLock()
+	defer parserMu.RUnlock()
+	_, ok := parserRegistry[key]
+	return ok
+}

@@ -34,10 +34,35 @@ type SidecarOps struct {
 
 // SidecarOperation defines one operation mapping in the sidecar file.
 type SidecarOperation struct {
-	ID                   string              `yaml:"id"`
-	NativePaths          []string            `yaml:"native_paths"`
-	OCPaths              []string            `yaml:"oc_paths"`
-	CanonicalLeafAliases []SidecarFieldAlias `yaml:"canonical_leaf_aliases"`
+	ID                   string               `yaml:"id"`
+	Data                 OperationDataKind    `yaml:"data,omitempty"`
+	Datastore            string               `yaml:"datastore,omitempty"`
+	Preferred            []string             `yaml:"preferred,omitempty"`
+	Parameters           []OperationParameter `yaml:"parameters,omitempty"`
+	Limits               *OperationLimits     `yaml:"limits,omitempty"`
+	NativePaths          []string             `yaml:"native_paths"`
+	OCPaths              []string             `yaml:"oc_paths"`
+	CanonicalLeafAliases []SidecarFieldAlias  `yaml:"canonical_leaf_aliases"`
+}
+
+// OperationParameter describes how an operation parameter constrains a YANG
+// path. Parameters are intentionally declarative so gNMI/NETCONF paths can be
+// rendered from sidecar contracts instead of hardcoded in tool packages.
+type OperationParameter struct {
+	Name        string   `yaml:"name"`
+	PathKey     string   `yaml:"path_key,omitempty"`
+	Default     string   `yaml:"default,omitempty"`
+	Required    bool     `yaml:"required,omitempty"`
+	Allowed     []string `yaml:"allowed,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+}
+
+// OperationLimits captures operator-safety defaults for high-volume
+// operations such as route tables, logs, and large counters.
+type OperationLimits struct {
+	DefaultCount int `yaml:"default_count,omitempty"`
+	MaxCount     int `yaml:"max_count,omitempty"`
+	MaxBytes     int `yaml:"max_bytes,omitempty"`
 }
 
 // SidecarFieldAlias maps a vendor-specific YANG leaf name to a canonical
@@ -81,6 +106,11 @@ func (s *SidecarOps) ToOperationMappings() []OperationMapping {
 	for _, op := range s.Operations {
 		mappings = append(mappings, OperationMapping{
 			OperationID: op.ID,
+			Data:        op.Data.withDefault(),
+			Datastore:   op.Datastore,
+			Preferred:   op.Preferred,
+			Parameters:  op.Parameters,
+			Limits:      op.Limits,
 			NativePaths: op.NativePaths,
 			OCPaths:     op.OCPaths,
 		})

@@ -80,6 +80,13 @@ func BuildAndRegisterProfiles(store *SchemaStore) {
 				"platform", bundle.Key.Platform,
 			)
 		}
+		report := BuildCoverageReport(schemaProfile, warnings)
+		slog.Info("schema operation coverage",
+			"vendor", report.Vendor,
+			"platform", report.Platform,
+			"version", bundle.Key.Version,
+			"operations", len(report.Operations),
+		)
 
 		// Score: count total resolved protocol paths across operations.
 		score := 0

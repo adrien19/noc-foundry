@@ -56,6 +56,54 @@ func init() {
 					},
 				},
 			},
+			OpGetBGPNeighbors: {
+				OperationID: OpGetBGPNeighbors,
+				Paths: []ProtocolPath{
+					{
+						Protocol:  ProtocolCLI,
+						Command:   "show network-instance default protocols bgp neighbor",
+						Format:    "json",
+						FormatArg: "| as json",
+					},
+					{
+						Protocol: ProtocolCLI,
+						Command:  "show network-instance default protocols bgp neighbor",
+						Format:   "text",
+					},
+				},
+			},
+			OpGetRouteTable: {
+				OperationID: OpGetRouteTable,
+				Paths: []ProtocolPath{
+					{
+						Protocol:  ProtocolCLI,
+						Command:   "show network-instance default route-table",
+						Format:    "json",
+						FormatArg: "| as json",
+					},
+					{
+						Protocol: ProtocolCLI,
+						Command:  "show network-instance default route-table",
+						Format:   "text",
+					},
+				},
+			},
+			OpGetSystemAlarms: {
+				OperationID: OpGetSystemAlarms,
+				Paths: []ProtocolPath{
+					{
+						Protocol:  ProtocolCLI,
+						Command:   "show system alarm",
+						Format:    "json",
+						FormatArg: "| as json",
+					},
+					{
+						Protocol: ProtocolCLI,
+						Command:  "show system alarm",
+						Format:   "text",
+					},
+				},
+			},
 		},
 	})
 }

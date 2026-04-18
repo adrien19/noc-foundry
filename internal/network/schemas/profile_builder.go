@@ -36,6 +36,16 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 	ops := make(map[string]profiles.OperationDescriptor)
 
 	for _, m := range mappings {
+		// TODO(schema-ops): Render parameterized path keys from m.Parameters at
+		// invocation time. High-volume operations such as get_route_table and
+		// get_bgp_rib must avoid full-table fetches when prefix, afi_safi, or
+		// network_instance parameters are supplied. Today BuildProfile records
+		// unbound paths and operator-safety limits; query execution still needs a
+		// parameter-aware path renderer before those tools are fully Ops-ready.
+		if len(m.Parameters) > 0 {
+			warnings = append(warnings, fmt.Sprintf("operation %s: parameter bindings declared but invocation-time YANG path rendering is not implemented yet", m.OperationID))
+		}
+
 		// Collect resolved paths by protocol, combining gNMI paths and
 		// NETCONF filters so each protocol appears as a single ProtocolPath.
 		var ocGnmiPaths []string
@@ -69,33 +79,49 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 			}
 		}
 
-		// Build combined ProtocolPaths (one per protocol).
-		var paths []profiles.ProtocolPath
+		byProtocol := make(map[profiles.Protocol]profiles.ProtocolPath)
 		if len(ocGnmiPaths) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolGnmiOpenConfig] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolGnmiOpenConfig,
 				Paths:    ocGnmiPaths,
-			})
+			}
 		}
 		if len(ocNetconfFilters) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolNetconfOpenConfig] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolNetconfOpenConfig,
 				Filter:   combineNetconfFilters(ocNetconfFilters),
-			})
+			}
 		}
 		if len(nativeGnmiPaths) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolGnmiNative] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolGnmiNative,
 				Paths:    nativeGnmiPaths,
-			})
+			}
 		}
 		if len(nativeNetconfFilters) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolNetconfNative] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolNetconfNative,
 				Filter:   combineNetconfFilters(nativeNetconfFilters),
-			})
+			}
 		}
 
+		for proto, pp := range byProtocol {
+			if isNetconfProtocol(proto) && m.dataKind() == OperationDataConfig {
+				pp.UseGetConfig = true
+				pp.Datastore = m.datastore()
+				byProtocol[proto] = pp
+			}
+			if isNetconfProtocol(proto) && m.dataKind() == OperationDataConfigState {
+				// TODO(schema-ops): Split config_state operations into paired
+				// config and state retrieval paths when both are declared in the
+				// sidecar. For now NETCONF <get> preserves current behavior and
+				// returns available config+state, but pure config datastores may
+				// need an additional get-config RPC for exact config provenance.
+				byProtocol[proto] = pp
+			}
+		}
+
+		paths := orderedProtocolPaths(m, byProtocol)
 		if len(paths) > 0 {
 			ops[m.OperationID] = profiles.OperationDescriptor{
 				OperationID: m.OperationID,
@@ -113,6 +139,65 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 	}
 
 	return profile, warnings
+}
+
+func orderedProtocolPaths(m OperationMapping, byProtocol map[profiles.Protocol]profiles.ProtocolPath) []profiles.ProtocolPath {
+	order := defaultProtocolPreference()
+	if len(m.Preferred) > 0 {
+		order = parseProtocolPreference(m.Preferred)
+	}
+
+	seen := make(map[profiles.Protocol]bool, len(order))
+	var paths []profiles.ProtocolPath
+	for _, proto := range order {
+		pp, ok := byProtocol[proto]
+		if !ok {
+			continue
+		}
+		paths = append(paths, pp)
+		seen[proto] = true
+	}
+
+	// Preserve any protocols omitted from a custom preference after preferred
+	// entries. This keeps sidecar preference order additive, not destructive.
+	for _, proto := range defaultProtocolPreference() {
+		if seen[proto] {
+			continue
+		}
+		if pp, ok := byProtocol[proto]; ok {
+			paths = append(paths, pp)
+		}
+	}
+	return paths
+}
+
+func defaultProtocolPreference() []profiles.Protocol {
+	return []profiles.Protocol{
+		profiles.ProtocolGnmiOpenConfig,
+		profiles.ProtocolNetconfOpenConfig,
+		profiles.ProtocolGnmiNative,
+		profiles.ProtocolNetconfNative,
+	}
+}
+
+func parseProtocolPreference(preferred []string) []profiles.Protocol {
+	out := make([]profiles.Protocol, 0, len(preferred))
+	for _, raw := range preferred {
+		switch strings.ToLower(strings.TrimSpace(raw)) {
+		case string(profiles.ProtocolGnmiOpenConfig), "gnmi_oc", "openconfig_gnmi":
+			out = append(out, profiles.ProtocolGnmiOpenConfig)
+		case string(profiles.ProtocolNetconfOpenConfig), "netconf_oc", "openconfig_netconf":
+			out = append(out, profiles.ProtocolNetconfOpenConfig)
+		case string(profiles.ProtocolGnmiNative), "native_gnmi":
+			out = append(out, profiles.ProtocolGnmiNative)
+		case string(profiles.ProtocolNetconfNative), "native_netconf":
+			out = append(out, profiles.ProtocolNetconfNative)
+		}
+	}
+	if len(out) == 0 {
+		return defaultProtocolPreference()
+	}
+	return out
 }
 
 // combineNetconfFilters merges multiple NETCONF subtree filters.
@@ -276,4 +361,8 @@ func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile 
 
 func isCLIProtocol(p profiles.Protocol) bool {
 	return p == profiles.ProtocolCLI
+}
+
+func isNetconfProtocol(p profiles.Protocol) bool {
+	return p == profiles.ProtocolNetconfOpenConfig || p == profiles.ProtocolNetconfNative
 }

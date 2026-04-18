@@ -184,7 +184,7 @@ func (t Tool) invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider
 
 	// Validate that the operation exists in the device's profile.
 	if identity, ok := rawSource.(capabilities.SourceIdentity); ok {
-		if err := validateOperation(identity.DeviceVendor(), identity.DevicePlatform(), operation); err != nil {
+		if err := validateOperation(identity.DeviceVendor(), identity.DevicePlatform(), identity.DeviceVersion(), operation); err != nil {
 			return nil, util.NewClientServerError("invalid operation", http.StatusBadRequest, err)
 		}
 	}
@@ -197,17 +197,17 @@ func (t Tool) invokeSingle(ctx context.Context, resourceMgr tools.SourceProvider
 }
 
 // validateOperation checks that the given operation exists in the device's profile.
-func validateOperation(vendor, platform, operation string) error {
-	profile, ok := profiles.Lookup(vendor, platform)
+func validateOperation(vendor, platform, version, operation string) error {
+	profile, ok := profiles.LookupForDevice(vendor, platform, version)
 	if !ok {
-		return fmt.Errorf("no profile registered for %s.%s", vendor, platform)
+		return fmt.Errorf("no profile registered for %s.%s version %q", vendor, platform, version)
 	}
 	if _, ok := profile.Operations[operation]; !ok {
 		available := make([]string, 0, len(profile.Operations))
 		for k := range profile.Operations {
 			available = append(available, k)
 		}
-		return fmt.Errorf("operation %q not available for %s.%s; known operations: %s", operation, vendor, platform, strings.Join(available, ", "))
+		return fmt.Errorf("operation %q not available for %s.%s version %q; known operations: %s", operation, vendor, platform, version, strings.Join(available, ", "))
 	}
 	return nil
 }

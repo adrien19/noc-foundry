@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/adrien19/noc-foundry/internal/network/models"
@@ -77,14 +79,14 @@ func (m *SchemaMapper) MapJSON(data any) (any, models.QualityMeta, error) {
 	// Unwrap vendor-namespaced wrappers recursively.
 	items := m.unwrapToList(data)
 
-	switch m.cmap.ModelType {
-	case "InterfaceState":
-		return m.mapInterfaces(items)
-	case "SystemVersion":
-		return m.mapSystemVersion(items)
-	default:
-		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("unsupported model type %q", m.cmap.ModelType)
+	descriptor, ok := LookupCanonicalModel(m.cmap.OperationID)
+	if !ok {
+		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("no canonical model registered for operation %q", m.cmap.OperationID)
 	}
+	if descriptor.ModelType != m.cmap.ModelType {
+		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("canonical map model type %q does not match registered model %q for operation %q", m.cmap.ModelType, descriptor.ModelType, m.cmap.OperationID)
+	}
+	return m.mapGeneric(items, descriptor)
 }
 
 // MapXML converts raw NETCONF XML into a generic JSON-like structure, then
@@ -99,6 +101,152 @@ func (m *SchemaMapper) MapXML(rawXML []byte) (any, models.QualityMeta, error) {
 		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("XML parse failed: %w", err)
 	}
 	return m.MapJSON(generic)
+}
+
+func (m *SchemaMapper) mapGeneric(items []map[string]any, descriptor CanonicalModelDescriptor) (any, models.QualityMeta, error) {
+	if descriptor.List {
+		out := reflect.MakeSlice(reflect.SliceOf(descriptor.Type), 0, len(items))
+		for _, item := range items {
+			value, mapped := m.extractGeneric(item, descriptor.Type)
+			if !mapped || !hasRequiredFields(value, descriptor.RequiredFields) {
+				continue
+			}
+			out = reflect.Append(out, value)
+		}
+		if out.Len() == 0 {
+			return out.Interface(), models.QualityMeta{MappingQuality: models.MappingPartial, Warnings: []string{"no canonical records extracted"}}, nil
+		}
+		return out.Interface(), models.QualityMeta{MappingQuality: models.MappingExact}, nil
+	}
+
+	merged := make(map[string]any)
+	for _, item := range items {
+		flat := m.flattenWithAliases(item)
+		for k, v := range flat {
+			if _, exists := merged[k]; !exists {
+				merged[k] = v
+			}
+		}
+	}
+	value, mapped := m.extractGeneric(merged, descriptor.Type)
+	if !mapped || !hasRequiredFields(value, descriptor.RequiredFields) {
+		return value.Interface(), models.QualityMeta{MappingQuality: models.MappingPartial, Warnings: []string{"canonical singleton payload is incomplete"}}, nil
+	}
+	return value.Interface(), models.QualityMeta{MappingQuality: models.MappingExact}, nil
+}
+
+func (m *SchemaMapper) extractGeneric(data map[string]any, modelType reflect.Type) (reflect.Value, bool) {
+	flat := m.flattenWithAliases(data)
+	value := reflect.New(modelType).Elem()
+	mapped := false
+	extensions := make(map[string]any)
+
+	for key, val := range flat {
+		fm, ok := m.fieldIndex[key]
+		if !ok {
+			extensions[key] = val
+			continue
+		}
+		if setModelField(value, fm, val) {
+			mapped = true
+		}
+	}
+
+	if len(extensions) > 0 {
+		if field := value.FieldByName("VendorExtensions"); field.IsValid() && field.CanSet() && field.Kind() == reflect.Map {
+			field.Set(reflect.ValueOf(extensions))
+		}
+	}
+	return value, mapped
+}
+
+func setModelField(value reflect.Value, fm FieldMapping, raw any) bool {
+	field := value.FieldByName(fm.CanonicalField)
+	if !field.IsValid() || !field.CanSet() {
+		return false
+	}
+	if isZeroNonEmpty(field) {
+		return false
+	}
+
+	rawString := toString(raw)
+	if fm.Normalizer != "" {
+		rawString = NormalizeValue(fm.Normalizer, rawString)
+		raw = rawString
+	}
+
+	switch field.Kind() {
+	case reflect.String:
+		field.SetString(rawString)
+		return rawString != ""
+	case reflect.Bool:
+		b := toBool(raw)
+		field.SetBool(b)
+		return b
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i := toInt64(raw)
+		field.SetInt(i)
+		return i != 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		u := toUint64(raw)
+		field.SetUint(u)
+		return u != 0
+	case reflect.Float32, reflect.Float64:
+		f := toFloat64(raw)
+		field.SetFloat(f)
+		return f != 0
+	case reflect.Slice:
+		if field.Type().Elem().Kind() == reflect.String {
+			items := toStringSlice(raw)
+			field.Set(reflect.ValueOf(items))
+			return len(items) > 0
+		}
+		// TODO(schema-mapper): Add declarative child collection mappings so
+		// nested structs such as ACL.Entries, QoS queues, and topology links can
+		// be populated directly from YANG sub-containers. Today nested lists need
+		// dedicated parsers or sidecar-aware mapper extensions to be Ops-ready.
+		return false
+	case reflect.Pointer:
+		// TODO(schema-mapper): Add pointer struct mapping for nested singleton
+		// containers such as InterfaceState.Counters. This requires sidecar
+		// metadata to identify the child container and field prefix.
+		return false
+	default:
+		return false
+	}
+}
+
+func isZeroNonEmpty(field reflect.Value) bool {
+	switch field.Kind() {
+	case reflect.String:
+		return field.String() != ""
+	case reflect.Bool:
+		return field.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() != 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return field.Uint() != 0
+	case reflect.Float32, reflect.Float64:
+		return field.Float() != 0
+	case reflect.Slice, reflect.Map:
+		return field.Len() != 0
+	default:
+		return false
+	}
+}
+
+func hasRequiredFields(value reflect.Value, fields []string) bool {
+	for _, name := range fields {
+		field := value.FieldByName(name)
+		if !field.IsValid() || isReflectZero(field) {
+			return false
+		}
+	}
+	return true
+}
+
+func isReflectZero(v reflect.Value) bool {
+	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
 
 // ---------------------------------------------------------------------------
@@ -293,7 +441,11 @@ func (m *SchemaMapper) unwrapToList(data any) []map[string]any {
 			}
 		}
 		// No namespaced wrapper — look for known list keys.
-		for _, listKey := range []string{"interface", "interfaces", "port"} {
+		for _, listKey := range []string{
+			"interface", "interfaces", "port", "neighbor", "neighbors", "route", "routes",
+			"alarm", "alarms", "component", "components", "entry", "entries", "instance",
+			"policy-definition", "acl-set", "queue", "classifier", "process", "server",
+		} {
 			if arr, ok := v[listKey]; ok {
 				switch inner := arr.(type) {
 				case []any:
@@ -409,6 +561,128 @@ func toInt(v any) int {
 		}
 	}
 	return 0
+}
+
+func toInt64(v any) int64 {
+	switch t := v.(type) {
+	case int:
+		return int64(t)
+	case int64:
+		return t
+	case float64:
+		return int64(t)
+	case json.Number:
+		i, _ := t.Int64()
+		return i
+	case string:
+		i, _ := strconv.ParseInt(strings.TrimSpace(t), 10, 64)
+		return i
+	default:
+		return 0
+	}
+}
+
+func toUint64(v any) uint64 {
+	switch t := v.(type) {
+	case uint64:
+		return t
+	case int:
+		if t > 0 {
+			return uint64(t)
+		}
+	case int64:
+		if t > 0 {
+			return uint64(t)
+		}
+	case float64:
+		if t > 0 {
+			return uint64(t)
+		}
+	case json.Number:
+		if u, err := strconv.ParseUint(t.String(), 10, 64); err == nil {
+			return u
+		}
+	case string:
+		u, _ := strconv.ParseUint(strings.TrimSpace(t), 10, 64)
+		return u
+	}
+	return 0
+}
+
+func toFloat64(v any) float64 {
+	switch t := v.(type) {
+	case float64:
+		return t
+	case int:
+		return float64(t)
+	case int64:
+		return float64(t)
+	case uint64:
+		return float64(t)
+	case json.Number:
+		f, _ := t.Float64()
+		return f
+	case string:
+		cleaned := strings.TrimSuffix(strings.TrimSpace(t), "%")
+		f, _ := strconv.ParseFloat(cleaned, 64)
+		return f
+	default:
+		return 0
+	}
+}
+
+func toBool(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		switch strings.ToLower(strings.TrimSpace(t)) {
+		case "true", "up", "active", "enabled", "enable", "yes", "1":
+			return true
+		default:
+			return false
+		}
+	case float64:
+		return t != 0
+	case int:
+		return t != 0
+	case int64:
+		return t != 0
+	default:
+		return false
+	}
+}
+
+func toStringSlice(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s := toString(item); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	case string:
+		if strings.Contains(t, ",") {
+			parts := strings.Split(t, ",")
+			out := make([]string, 0, len(parts))
+			for _, p := range parts {
+				if s := strings.TrimSpace(p); s != "" {
+					out = append(out, s)
+				}
+			}
+			return out
+		}
+		if strings.TrimSpace(t) == "" {
+			return nil
+		}
+		return []string{strings.TrimSpace(t)}
+	default:
+		return nil
+	}
 }
 
 // ---------------------------------------------------------------------------
