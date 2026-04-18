@@ -97,7 +97,7 @@ func LoadFromRepos(store *SchemaStore, repos []RepoConfig, cacheDir string) (int
 			if sidecar, source, serr := resolveSidecar(v, yangDir, repoCfg.Name); serr != nil {
 				errs = append(errs, serr)
 			} else if sidecar != nil {
-				RegisterSidecarMappings(key, sidecar.ToOperationMappings())
+				RegisterSidecarMappingsWithOrigin(key, sidecar.ToOperationMappings(), source)
 				sidecar.ExtendCanonicalMaps()
 				slog.Info("loaded vendor sidecar",
 					"source", source,

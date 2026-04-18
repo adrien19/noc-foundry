@@ -273,15 +273,12 @@ func setModelField(value reflect.Value, fm FieldMapping, raw any) bool {
 			field.Set(reflect.ValueOf(items))
 			return len(items) > 0
 		}
-		// TODO(schema-mapper): Add declarative child collection mappings so
-		// nested structs such as ACL.Entries, QoS queues, and topology links can
-		// be populated directly from YANG sub-containers. Today nested lists need
-		// dedicated parsers or sidecar-aware mapper extensions to be Ops-ready.
+		// Struct slices are populated by declarative ChildMappings before flat
+		// field assignment reaches this generic scalar conversion path.
 		return false
 	case reflect.Pointer:
-		// TODO(schema-mapper): Add pointer struct mapping for nested singleton
-		// containers such as InterfaceState.Counters. This requires sidecar
-		// metadata to identify the child container and field prefix.
+		// Pointer structs are populated by declarative ChildMappings before flat
+		// field assignment reaches this generic scalar conversion path.
 		return false
 	default:
 		return false

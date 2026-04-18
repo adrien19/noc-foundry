@@ -364,7 +364,7 @@ func LoadFromDirectory(store *SchemaStore, baseDir string) (int, []error) {
 				if sidecar, ok, serr := TryLoadSidecar(versionDir); serr != nil {
 					errs = append(errs, fmt.Errorf("sidecar for %s: %w", key.String(), serr))
 				} else if ok {
-					RegisterSidecarMappings(key, sidecar.ToOperationMappings())
+					RegisterSidecarMappingsWithOrigin(key, sidecar.ToOperationMappings(), "repo:"+versionDir)
 					sidecar.ExtendCanonicalMaps()
 					slog.Info("loaded vendor sidecar",
 						"vendor", key.Vendor,

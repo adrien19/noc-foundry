@@ -249,13 +249,24 @@ func OperationMappingsForVendor(vendor, platform string) []OperationMapping {
 // ---------------------------------------------------------------------------
 
 // sidecarMappings stores operation mappings loaded from nocfoundry-ops.yaml
-// sidecar files. Key: SchemaKey.String() → []OperationMapping.
+// sidecar files. Key: SchemaKey.String() → sidecarMappingSet.
+type sidecarMappingSet struct {
+	Mappings []OperationMapping
+	Origin   string
+}
+
 var sidecarMappings sync.Map
 
 // RegisterSidecarMappings stores sidecar-provided operation mappings for
 // the given schema key. These take priority over hardcoded mappings.
 func RegisterSidecarMappings(key SchemaKey, mappings []OperationMapping) {
-	sidecarMappings.Store(key.String(), mappings)
+	RegisterSidecarMappingsWithOrigin(key, mappings, "repo")
+}
+
+// RegisterSidecarMappingsWithOrigin stores sidecar-provided operation mappings
+// with the source used to resolve them: opsFile, repo, prebuilt, or fallback.
+func RegisterSidecarMappingsWithOrigin(key SchemaKey, mappings []OperationMapping, origin string) {
+	sidecarMappings.Store(key.String(), sidecarMappingSet{Mappings: mappings, Origin: normalizeSidecarOrigin(origin)})
 }
 
 // GetOperationMappings returns the operation mappings for a vendor/platform/version.
@@ -264,9 +275,34 @@ func RegisterSidecarMappings(key SchemaKey, mappings []OperationMapping) {
 func GetOperationMappings(vendor, platform, version string) []OperationMapping {
 	key := SchemaKey{Vendor: vendor, Platform: platform, Version: version}
 	if v, ok := sidecarMappings.Load(key.String()); ok {
-		return v.([]OperationMapping)
+		return v.(sidecarMappingSet).Mappings
 	}
 	return OperationMappingsForVendor(vendor, platform)
+}
+
+// GetOperationMappingOrigin returns the mapping origin for coverage/debugging.
+func GetOperationMappingOrigin(vendor, platform, version string) string {
+	key := SchemaKey{Vendor: vendor, Platform: platform, Version: version}
+	if v, ok := sidecarMappings.Load(key.String()); ok {
+		return v.(sidecarMappingSet).Origin
+	}
+	return "fallback"
+}
+
+func normalizeSidecarOrigin(origin string) string {
+	switch {
+	case strings.HasPrefix(origin, "opsFile"):
+		return "opsFile"
+	case strings.HasPrefix(origin, "repo"):
+		return "repo"
+	case strings.HasPrefix(origin, "prebuilt"):
+		return "prebuilt"
+	default:
+		if origin == "" {
+			return "fallback"
+		}
+		return origin
+	}
 }
 
 // ResetSidecarMappings clears the sidecar mapping registry. For testing only.

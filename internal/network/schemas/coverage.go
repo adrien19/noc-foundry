@@ -80,11 +80,7 @@ func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageR
 			DedicatedToolPresent:  dedicatedToolOperations[opID],
 			CanonicalMapPresent:   hasCanonicalMap(opID),
 			CanonicalModelPresent: hasCanonicalModel(opID),
-			// TODO(schema-coverage): Record exact sidecar origin (opsFile,
-			// repo-local, prebuilt, or fallback) in the sidecar registry and
-			// surface it here. Operators need this to debug why a path came from
-			// a particular mapping source.
-			SidecarOrigin: "unknown",
+			SidecarOrigin:         GetOperationMappingOrigin(profile.Vendor, profile.Platform, profile.Version),
 		}
 		protocolSeen := map[string]bool{}
 		for _, pp := range op.Paths {
@@ -102,9 +98,6 @@ func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageR
 		coverage.Readiness = readinessForCoverage(coverage)
 		report.Operations = append(report.Operations, coverage)
 	}
-	// TODO(schema-coverage): Expose CoverageReport through an operator-facing
-	// debug/readiness tool so NOC users can inspect missing mappings without
-	// reading startup logs.
 	return report
 }
 
@@ -114,6 +107,12 @@ func readinessForCoverage(c OperationCoverage) string {
 	}
 	if !c.CanonicalMapPresent || !c.CanonicalModelPresent {
 		return "schema-ready"
+	}
+	if len(c.CLIParsers) > 0 && !c.DedicatedToolPresent {
+		return "cli-ready"
+	}
+	if c.DedicatedToolPresent && len(c.Warnings) == 0 {
+		return "ops-ready"
 	}
 	if c.DedicatedToolPresent {
 		return "tool-ready"
