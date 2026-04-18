@@ -29,6 +29,7 @@ import (
 	_ "github.com/adrien19/noc-foundry/internal/tools/common/validate"
 	_ "github.com/adrien19/noc-foundry/internal/tools/common/validationruns"
 	_ "github.com/adrien19/noc-foundry/internal/tools/http"
+	_ "github.com/adrien19/noc-foundry/internal/tools/network/compare"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/diagnostictools"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/listdevices"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/profiletools"
@@ -39,11 +40,8 @@ import (
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showcoverage"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showinterfaces"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showroutes"
+	_ "github.com/adrien19/noc-foundry/internal/tools/network/showtopology"
 	_ "github.com/adrien19/noc-foundry/internal/tools/network/showversion"
-	// TODO(ops-readiness): Add network-show-topology and network-compare after
-	// LLDP/tool coverage has confidence/evidence semantics and fleet fanout can
-	// return structured per-device partial results instead of failing whole
-	// aggregations.
 	_ "github.com/adrien19/noc-foundry/internal/tools/utility/wait"
 
 	// Import source packages for side effect of registration

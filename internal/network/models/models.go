@@ -746,10 +746,9 @@ type TopologyLink struct {
 	Evidence        []string `json:"evidence,omitempty"`
 }
 
-// TODO(ops-readiness): When network-show-topology is implemented, populate
-// TopologyLink.Confidence and Evidence from bidirectional LLDP, single-sided
-// LLDP, and inventory matching. Explicitly handle hostname/source-ID mismatch
-// and unidirectional LLDP evidence instead of reporting those links as certain.
+// TODO(ops-readiness): Add hostname/source-ID alias matching so topology can
+// recognize bidirectional LLDP when a remote system name differs from the
+// device-pool source ID. Today unmatched names remain lower-confidence links.
 
 type ComparisonResult struct {
 	Operation   string             `json:"operation,omitempty"`
