@@ -134,8 +134,13 @@ func collectLLDPNeighbors(data any, localInterface string, out *[]any) {
 }
 
 func appendLLDPNeighborItems(raw any, localInterface string, out *[]any) {
+	maxInt := int(^uint(0) >> 1)
 	for _, item := range rawToMapSlice(raw) {
-		neighbor := make(map[string]any, len(item)+1)
+		neighborCap := len(item)
+		if neighborCap < maxInt {
+			neighborCap++
+		}
+		neighbor := make(map[string]any, neighborCap)
 		for k, v := range item {
 			neighbor[k] = v
 		}
