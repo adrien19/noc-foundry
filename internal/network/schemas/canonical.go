@@ -484,6 +484,29 @@ func init() {
 		},
 	})
 
+	RegisterCanonicalMap(&OperationCanonicalMap{
+		OperationID: "get_lldp_neighbors",
+		ModelType:   "LLDPNeighbor",
+		Fields: []FieldMapping{
+			{YANGLeaf: "local-interface", CanonicalField: "LocalInterface"},
+			{YANGLeaf: "local-port", CanonicalField: "LocalInterface"},
+			{YANGLeaf: "remote-system-name", CanonicalField: "RemoteSystemName"},
+			{YANGLeaf: "system-name", CanonicalField: "RemoteSystemName"},
+			{YANGLeaf: "port-id", CanonicalField: "RemotePortID"},
+			{YANGLeaf: "remote-port-id", CanonicalField: "RemotePortID"},
+			{YANGLeaf: "port-description", CanonicalField: "RemotePortDescription"},
+			{YANGLeaf: "remote-port-description", CanonicalField: "RemotePortDescription"},
+			{YANGLeaf: "chassis-id", CanonicalField: "RemoteChassisID"},
+			{YANGLeaf: "remote-chassis-id", CanonicalField: "RemoteChassisID"},
+			{YANGLeaf: "management-address", CanonicalField: "ManagementAddress"},
+			{YANGLeaf: "system-capabilities", CanonicalField: "SystemCapabilities"},
+		},
+		ContainerAliases: []ContainerAlias{
+			{Name: "state", MergeUp: true},
+			{Name: "config", MergeUp: true},
+		},
+	})
+
 	// get_system_version — covers OpenConfig, Nokia SRL, Nokia SROS.
 	RegisterCanonicalMap(&OperationCanonicalMap{
 		OperationID: "get_system_version",

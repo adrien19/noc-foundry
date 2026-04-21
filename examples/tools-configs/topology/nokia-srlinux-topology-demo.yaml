@@ -1,0 +1,99 @@
+# Nokia SR Linux topology and comparison demo.
+#
+# This demo uses schema-aware gNMI sources for LLDP collection. The tools
+# reference only sources and selectors; LLDP YANG paths are resolved by the
+# schema-derived profile from the SR Linux sidecar.
+#
+# Start with local schemas:
+#
+#   ./nocfoundry \
+#     --tools-file examples/tools-configs/topology/nokia-srlinux-topology-demo.yaml \
+#     --schema-dir yang-models \
+#     --ui
+#
+# Expected YANG directory layout:
+#
+#   yang-models/nokia/srlinux/v24.10 -> <SR Linux YANG model tree>
+
+---
+kind: deviceGroups
+name: topology-lab
+type: static
+sourceTemplates:
+  gnmi:
+    type: gnmi
+    port: ${GNMI_PORT:57400}
+    tls_insecure: true
+    username: ${GNMI_USER:admin}
+    password: ${GNMI_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    version: v24.10
+    native_yang: true
+    openconfig: false
+devices:
+  - name: spine-1
+    host: ${SPINE1_HOST:172.31.250.12}
+    labels:
+      vendor: nokia
+      site: topology-demo
+      role: spine
+  - name: spine-2
+    host: ${SPINE2_HOST:172.31.250.13}
+    labels:
+      vendor: nokia
+      site: topology-demo
+      role: spine
+  - name: leaf-1
+    host: ${LEAF1_HOST:172.31.250.11}
+    labels:
+      vendor: nokia
+      site: topology-demo
+      role: leaf
+
+---
+kind: tools
+name: show_topology_demo
+type: network-show-topology
+description: >-
+  Build an LLDP-derived topology map for all demo devices. Links include
+  confidence and evidence such as lldp_bidirectional, lldp_single_sided,
+  and unmatched_inventory_node.
+sourceSelector:
+  matchLabels:
+    site: topology-demo
+  template: gnmi
+  maxConcurrency: 5
+
+---
+kind: tools
+name: compare_demo_interfaces
+type: network-compare
+description: >-
+  Compare the canonical get_interfaces operation across the demo devices.
+  Invoke with operation=get_interfaces, or pass another schema-backed operation.
+sourceSelector:
+  matchLabels:
+    site: topology-demo
+  template: gnmi
+  maxConcurrency: 5
+
+---
+kind: tools
+name: show_demo_lldp
+type: network-show-lldp
+description: Show LLDP neighbors from the selected demo device.
+sourceSelector:
+  matchLabels:
+    site: topology-demo
+  template: gnmi
+  maxConcurrency: 5
+
+---
+kind: toolsets
+name: topology-demo-tools
+description: Topology, LLDP, and comparison workflow for a Nokia SR Linux lab.
+tools:
+  - show_topology_demo
+  - compare_demo_interfaces
+  - show_demo_lldp

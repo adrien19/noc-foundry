@@ -322,9 +322,11 @@ func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile 
 	}
 
 	merged := &profiles.Profile{
-		Vendor:     schemaProfile.Vendor,
-		Platform:   schemaProfile.Platform,
-		Operations: make(map[string]profiles.OperationDescriptor),
+		Vendor:             schemaProfile.Vendor,
+		Platform:           schemaProfile.Platform,
+		Version:            schemaProfile.Version,
+		Operations:         make(map[string]profiles.OperationDescriptor),
+		DiagnosticCommands: mergeDiagnosticCommands(schemaProfile.DiagnosticCommands, fallback.DiagnosticCommands),
 	}
 
 	// Start with all operations from the fallback.
@@ -357,10 +359,28 @@ func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile 
 
 		merged.Operations[opID] = profiles.OperationDescriptor{
 			OperationID: opID,
+			Data:        schemaOp.Data,
+			Datastore:   schemaOp.Datastore,
+			Parameters:  schemaOp.Parameters,
+			Limits:      schemaOp.Limits,
 			Paths:       mergedPaths,
 		}
 	}
 
+	return merged
+}
+
+func mergeDiagnosticCommands(primary, fallback map[string]profiles.DiagnosticCommandTemplate) map[string]profiles.DiagnosticCommandTemplate {
+	if len(primary) == 0 && len(fallback) == 0 {
+		return nil
+	}
+	merged := make(map[string]profiles.DiagnosticCommandTemplate, len(primary)+len(fallback))
+	for k, v := range fallback {
+		merged[k] = v
+	}
+	for k, v := range primary {
+		merged[k] = v
+	}
 	return merged
 }
 

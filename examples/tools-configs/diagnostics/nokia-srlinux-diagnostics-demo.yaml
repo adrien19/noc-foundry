@@ -1,0 +1,84 @@
+# Nokia SR Linux diagnostic tools demo.
+#
+# Diagnostic tools are CLI/RPC-oriented and use profile-owned command
+# templates. They are not YANG sidecar operations, and tools do not embed
+# native or OpenConfig YANG paths.
+#
+# Start the server:
+#
+#   ./nocfoundry \
+#     --tools-file examples/tools-configs/diagnostics/nokia-srlinux-diagnostics-demo.yaml \
+#     --ui
+
+---
+kind: deviceGroups
+name: diagnostics-lab
+type: static
+sourceTemplates:
+  ssh:
+    type: ssh
+    port: ${SSH_PORT:22}
+    username: ${SSH_USER:admin}
+    password: ${SSH_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    version: v24.10
+    timeout: 30s
+devices:
+  - name: spine-1
+    host: ${SPINE1_HOST:172.31.250.12}
+    labels:
+      vendor: nokia
+      site: diagnostics-demo
+      role: spine
+  - name: leaf-1
+    host: ${LEAF1_HOST:172.31.250.11}
+    labels:
+      vendor: nokia
+      site: diagnostics-demo
+      role: leaf
+
+---
+kind: tools
+name: ping_from_spine1
+type: network-ping
+description: >-
+  Run a bounded ping from spine-1. Parameters such as target, count, vrf,
+  and source are validated before rendering the profile command template.
+source: diagnostics-lab/spine-1/ssh
+
+---
+kind: tools
+name: traceroute_from_spine1
+type: network-traceroute
+description: >-
+  Run a bounded traceroute from spine-1 using the profile command template.
+source: diagnostics-lab/spine-1/ssh
+
+---
+kind: tools
+name: show_spine1_config_diff
+type: network-show-config-diff
+description: >-
+  Show a read-only configuration diff. Defaults are source=running and
+  target=candidate when those parameters are omitted.
+source: diagnostics-lab/spine-1/ssh
+
+---
+kind: tools
+name: show_spine1_command
+type: network-show
+description: >-
+  Optional read-only CLI exploration tool for comparing generic command
+  output with dedicated diagnostic tool results.
+source: diagnostics-lab/spine-1/ssh
+
+---
+kind: toolsets
+name: diagnostics-demo-tools
+description: Safe profile-template diagnostics for Nokia SR Linux.
+tools:
+  - ping_from_spine1
+  - traceroute_from_spine1
+  - show_spine1_config_diff
+  - show_spine1_command

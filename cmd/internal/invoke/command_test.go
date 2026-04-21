@@ -128,3 +128,26 @@ func TestInvokeTool(t *testing.T) {
 		})
 	}
 }
+
+func TestInvokeTool_JSONIntegerParams(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"limit":"%s"}`, r.URL.Query().Get("limit"))
+	}))
+	defer testServer.Close()
+
+	tmpDir := t.TempDir()
+	toolsFileContent := fmt.Sprintf("sources:\n  my-http:\n    kind: http\n    baseUrl: %s\ntools:\n  echo-limit:\n    kind: http\n    source: my-http\n    description: \"echo limit\"\n    method: GET\n    path: /echo\n    queryParams:\n      - name: limit\n        type: integer\n        description: integer limit\n", testServer.URL)
+	toolsFilePath := filepath.Join(tmpDir, "tools.yaml")
+	if err := os.WriteFile(toolsFilePath, []byte(toolsFileContent), 0644); err != nil {
+		t.Fatalf("failed to write tools file: %v", err)
+	}
+
+	got, err := invokeCommand([]string{"invoke", "echo-limit", `{"limit": 5}`, "--tools-file", toolsFilePath})
+	if err != nil {
+		t.Fatalf("invokeCommand() error = %v", err)
+	}
+	if !strings.Contains(got, `"limit": "5"`) {
+		t.Fatalf("got %q, want integer parameter to be parsed and echoed", got)
+	}
+}

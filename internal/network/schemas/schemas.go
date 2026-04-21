@@ -360,13 +360,30 @@ func LoadFromDirectory(store *SchemaStore, baseDir string) (int, []error) {
 				}
 				loaded++
 
-				// Try loading vendor sidecar (nocfoundry-ops.yaml).
-				if sidecar, ok, serr := TryLoadSidecar(versionDir); serr != nil {
+				prebuilt, hasPrebuilt, perr := LoadPrebuiltSidecar(key.Vendor, key.Platform)
+				if perr != nil {
+					errs = append(errs, perr)
+				}
+				sidecar := prebuilt
+				source := ""
+				if hasPrebuilt {
+					source = "prebuilt:" + key.Vendor + "/" + key.Platform
+				}
+
+				// Try loading vendor sidecar (nocfoundry-ops.yaml). A local
+				// sidecar overlays the prebuilt operations reference by
+				// operation ID instead of replacing the whole catalog.
+				if local, ok, serr := TryLoadSidecar(versionDir); serr != nil {
 					errs = append(errs, fmt.Errorf("sidecar for %s: %w", key.String(), serr))
 				} else if ok {
-					RegisterSidecarMappingsWithOrigin(key, sidecar.ToOperationMappings(), "repo:"+versionDir)
+					sidecar = MergeSidecars(prebuilt, local)
+					source = "repo:" + versionDir
+				}
+				if sidecar != nil {
+					RegisterSidecarMappingsWithOrigin(key, sidecar.ToOperationMappings(), source)
 					sidecar.ExtendCanonicalMaps()
 					slog.Info("loaded vendor sidecar",
+						"source", source,
 						"vendor", key.Vendor,
 						"platform", key.Platform,
 						"version", key.Version,

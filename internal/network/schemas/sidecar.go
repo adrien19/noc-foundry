@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/adrien19/noc-foundry/internal/prebuiltconfigs"
 	"github.com/goccy/go-yaml"
 )
 
@@ -101,6 +102,46 @@ func TryLoadSidecar(dir string) (*SidecarOps, bool, error) {
 	}
 
 	return &ops, true, nil
+}
+
+// LoadPrebuiltSidecar loads the embedded operations sidecar for vendor/platform.
+func LoadPrebuiltSidecar(vendor, platform string) (*SidecarOps, bool, error) {
+	data, err := prebuiltconfigs.GetSidecar(vendor, platform)
+	if err != nil {
+		return nil, false, nil
+	}
+	var ops SidecarOps
+	if err := yaml.Unmarshal(data, &ops); err != nil {
+		return nil, false, fmt.Errorf("parsing prebuilt sidecar for %s/%s: %w", vendor, platform, err)
+	}
+	return &ops, true, nil
+}
+
+// MergeSidecars overlays operation definitions by operation ID. The base
+// sidecar is the operations reference, while overlay entries replace or add
+// only the operations they declare.
+func MergeSidecars(base, overlay *SidecarOps) *SidecarOps {
+	if base == nil {
+		return overlay
+	}
+	if overlay == nil {
+		return base
+	}
+	merged := &SidecarOps{Operations: make([]SidecarOperation, 0, len(base.Operations)+len(overlay.Operations))}
+	index := make(map[string]int, len(base.Operations))
+	for _, op := range base.Operations {
+		index[op.ID] = len(merged.Operations)
+		merged.Operations = append(merged.Operations, op)
+	}
+	for _, op := range overlay.Operations {
+		if i, ok := index[op.ID]; ok {
+			merged.Operations[i] = op
+			continue
+		}
+		index[op.ID] = len(merged.Operations)
+		merged.Operations = append(merged.Operations, op)
+	}
+	return merged
 }
 
 // ToOperationMappings converts the sidecar operations to the internal

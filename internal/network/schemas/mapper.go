@@ -78,6 +78,9 @@ func NewSchemaMapper(bundle *SchemaBundle, operationID string) (*SchemaMapper, e
 //
 // Returns a typed payload (e.g. []models.InterfaceState) and quality metadata.
 func (m *SchemaMapper) MapJSON(data any) (any, models.QualityMeta, error) {
+	if m.cmap.OperationID == "get_lldp_neighbors" {
+		data = expandLLDPNeighbors(data)
+	}
 	// Unwrap vendor-namespaced wrappers recursively.
 	items := m.unwrapToList(data)
 
@@ -89,6 +92,58 @@ func (m *SchemaMapper) MapJSON(data any) (any, models.QualityMeta, error) {
 		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("canonical map model type %q does not match registered model %q for operation %q", m.cmap.ModelType, descriptor.ModelType, m.cmap.OperationID)
 	}
 	return m.mapGeneric(items, descriptor)
+}
+
+func expandLLDPNeighbors(data any) any {
+	var out []any
+	collectLLDPNeighbors(data, "", &out)
+	if len(out) == 0 {
+		return data
+	}
+	return out
+}
+
+func collectLLDPNeighbors(data any, localInterface string, out *[]any) {
+	switch v := data.(type) {
+	case map[string]any:
+		currentLocal := localInterface
+		for _, key := range []string{"name", "interface-name", "local-interface", "local-port"} {
+			if raw, ok := v[key]; ok && isScalar(raw) {
+				currentLocal = toString(raw)
+				break
+			}
+		}
+		if raw, ok := v["neighbor"]; ok {
+			appendLLDPNeighborItems(raw, currentLocal, out)
+		}
+		if raw, ok := v["neighbors"]; ok {
+			appendLLDPNeighborItems(raw, currentLocal, out)
+		}
+		for _, child := range v {
+			collectLLDPNeighbors(child, currentLocal, out)
+		}
+	case []any:
+		for _, item := range v {
+			collectLLDPNeighbors(item, localInterface, out)
+		}
+	case []map[string]any:
+		for _, item := range v {
+			collectLLDPNeighbors(item, localInterface, out)
+		}
+	}
+}
+
+func appendLLDPNeighborItems(raw any, localInterface string, out *[]any) {
+	for _, item := range rawToMapSlice(raw) {
+		neighbor := make(map[string]any, len(item)+1)
+		for k, v := range item {
+			neighbor[k] = v
+		}
+		if localInterface != "" {
+			neighbor["local-interface"] = localInterface
+		}
+		*out = append(*out, neighbor)
+	}
 }
 
 // MapXML converts raw NETCONF XML into a generic JSON-like structure, then

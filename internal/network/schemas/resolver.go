@@ -51,7 +51,9 @@ func (b *SchemaBundle) ResolvePath(yangPath string) (*ResolvedPaths, error) {
 	revision := ""
 	moduleName := ""
 	if mod != nil {
-		namespace = mod.Namespace.Name
+		if mod.Namespace != nil {
+			namespace = mod.Namespace.Name
+		}
 		moduleName = mod.Name
 		if len(mod.Revision) > 0 {
 			revision = latestRevision(mod.Revision)
@@ -268,7 +270,9 @@ func buildNestedNetconfFilter(entries []*yang.Entry) string {
 		entry := entries[i]
 		ns := ""
 		if mod := entryModule(entry); mod != nil {
-			ns = mod.Namespace.Name
+			if mod.Namespace != nil {
+				ns = mod.Namespace.Name
+			}
 		}
 
 		if result == "" {

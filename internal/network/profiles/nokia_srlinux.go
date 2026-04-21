@@ -24,23 +24,23 @@ func init() {
 		DiagnosticCommands: map[string]DiagnosticCommandTemplate{
 			OpRunPing: {
 				OperationID: OpRunPing,
-				Command:     "ping {target} count {count}",
+				Command:     "ping {target} -c {count}",
 				Optional: []DiagnosticCommandFragment{
 					{Parameter: "vrf", Template: " network-instance {vrf}"},
-					{Parameter: "source", Template: " source {source}"},
+					{Parameter: "source", Template: " -I {source}"},
 				},
 			},
 			OpRunTraceroute: {
 				OperationID: OpRunTraceroute,
-				Command:     "traceroute {target} max-hops {max_hops}",
+				Command:     "traceroute {target} -m {max_hops}",
 				Optional: []DiagnosticCommandFragment{
 					{Parameter: "vrf", Template: " network-instance {vrf}"},
-					{Parameter: "source", Template: " source {source}"},
+					{Parameter: "source", Template: " -s {source}"},
 				},
 			},
 			OpGetConfigurationDiff: {
 				OperationID: OpGetConfigurationDiff,
-				Command:     "show configuration diff {source} {target}",
+				Command:     "diff {source} {target}",
 			},
 		},
 		Operations: map[string]OperationDescriptor{

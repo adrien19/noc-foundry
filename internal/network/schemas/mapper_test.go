@@ -372,6 +372,50 @@ func TestMapJSON_QoSChildQueuesAndSchedulers(t *testing.T) {
 	}
 }
 
+func TestMapJSON_SRLinuxLLDPNestedNeighbors(t *testing.T) {
+	data := map[string]any{
+		"srl_nokia-system:system": map[string]any{
+			"srl_nokia-lldp:lldp": map[string]any{
+				"interface": []any{
+					map[string]any{
+						"name": "ethernet-1/1",
+						"neighbor": []any{
+							map[string]any{
+								"system-name":        "leaf-1",
+								"port-id":            "ethernet-1/49",
+								"port-description":   "uplink",
+								"chassis-id":         "aa:bb:cc:dd:ee:ff",
+								"management-address": "192.0.2.10",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	mapper, err := NewSchemaMapper(nil, "get_lldp_neighbors")
+	if err != nil {
+		t.Fatalf("NewSchemaMapper: %v", err)
+	}
+	result, quality, err := mapper.MapJSON(data)
+	if err != nil {
+		t.Fatalf("MapJSON: %v", err)
+	}
+
+	neighbors := result.([]models.LLDPNeighbor)
+	if len(neighbors) != 1 {
+		t.Fatalf("neighbors = %d, want 1; quality=%+v", len(neighbors), quality)
+	}
+	got := neighbors[0]
+	if got.LocalInterface != "ethernet-1/1" || got.RemoteSystemName != "leaf-1" || got.RemotePortID != "ethernet-1/49" {
+		t.Fatalf("unexpected LLDP neighbor: %+v", got)
+	}
+	if quality.MappingQuality != models.MappingExact {
+		t.Fatalf("quality = %q, want exact", quality.MappingQuality)
+	}
+}
+
 func TestMapJSON_SystemVersion_SRLinux(t *testing.T) {
 	// SRL system version comes from system/information + system/name.
 	data := map[string]any{

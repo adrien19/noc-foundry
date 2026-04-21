@@ -131,6 +131,51 @@ func TestLoadFromRepos_WithSidecar(t *testing.T) {
 	}
 }
 
+func TestLoadFromRepos_RepoSidecarOverlaysPrebuilt(t *testing.T) {
+	bareRepo := initRepoWithYANG(t, "main", true)
+	cacheDir := t.TempDir()
+
+	ResetSidecarMappings()
+	defer ResetSidecarMappings()
+
+	store := NewSchemaStore()
+	repos := []RepoConfig{
+		{
+			Name: "nokia-repo",
+			URL:  bareRepo,
+			Auth: GitAuth{Type: "none"},
+			Versions: []RepoVersion{
+				{Ref: "main", Vendor: "nokia", Platform: "srlinux", Version: "v99.1"},
+			},
+		},
+	}
+
+	loaded, errs := LoadFromRepos(store, repos, cacheDir)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if loaded != 1 {
+		t.Fatalf("expected 1 loaded, got %d", loaded)
+	}
+
+	mappings := GetOperationMappings("nokia", "srlinux", "v99.1")
+	var gotInterfaces, gotLLDP bool
+	for _, m := range mappings {
+		switch m.OperationID {
+		case "get_interfaces":
+			gotInterfaces = true
+			if len(m.NativePaths) == 0 || m.NativePaths[0] != "/test-iface:interface" {
+				t.Fatalf("expected repo sidecar to overlay get_interfaces, got %+v", m)
+			}
+		case "get_lldp_neighbors":
+			gotLLDP = true
+		}
+	}
+	if !gotInterfaces || !gotLLDP {
+		t.Fatalf("expected overlay get_interfaces and preserved prebuilt LLDP, got %+v", mappings)
+	}
+}
+
 func TestLoadFromRepos_MultiVersion(t *testing.T) {
 	bareV1 := initRepoWithYANG(t, "v1", false)
 	bareV2 := initRepoWithYANG(t, "v2", false)

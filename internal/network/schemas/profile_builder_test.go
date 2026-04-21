@@ -124,6 +124,12 @@ func TestMergeProfiles(t *testing.T) {
 	fallback := &profiles.Profile{
 		Vendor:   "nokia",
 		Platform: "srlinux",
+		DiagnosticCommands: map[string]profiles.DiagnosticCommandTemplate{
+			profiles.OpGetConfigurationDiff: {
+				OperationID: profiles.OpGetConfigurationDiff,
+				Command:     "diff {source} {target}",
+			},
+		},
 		Operations: map[string]profiles.OperationDescriptor{
 			"get_interfaces": {
 				OperationID: "get_interfaces",
@@ -177,6 +183,9 @@ func TestMergeProfiles(t *testing.T) {
 	}
 	if len(svOp.Paths) != 1 {
 		t.Errorf("get_system_version paths = %d; want 1", len(svOp.Paths))
+	}
+	if _, ok := merged.DiagnosticCommands[profiles.OpGetConfigurationDiff]; !ok {
+		t.Fatal("merged profile missing diagnostic command templates from fallback")
 	}
 }
 
