@@ -1,0 +1,222 @@
+// Copyright 2026 Adrien Ndikumana
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schemas
+
+import (
+	"sort"
+	"strings"
+
+	"github.com/adrien19/noc-foundry/internal/network/parsers"
+	"github.com/adrien19/noc-foundry/internal/network/profiles"
+)
+
+// OperationCoverage describes startup-time readiness for one schema-derived
+// operation. It is intentionally compact so it can be logged and tested.
+type OperationCoverage struct {
+	OperationID           string   `json:"operation_id"`
+	Protocols             []string `json:"protocols"`
+	Warnings              []string `json:"warnings,omitempty"`
+	CanonicalMapPresent   bool     `json:"canonical_map_present"`
+	CanonicalModelPresent bool     `json:"canonical_model_present"`
+	CLIParsers            []string `json:"cli_parsers,omitempty"`
+	DedicatedToolPresent  bool     `json:"dedicated_tool_present"`
+	DiagnosticTransport   string   `json:"diagnostic_transport,omitempty"`
+	DiagnosticTemplate    bool     `json:"diagnostic_template_present,omitempty"`
+	DiagnosticTypedResult bool     `json:"diagnostic_typed_result_present,omitempty"`
+	DiagnosticReady       string   `json:"diagnostic_ready,omitempty"`
+	Readiness             string   `json:"readiness"`
+	SidecarOrigin         string   `json:"sidecar_origin,omitempty"`
+}
+
+// CoverageReport summarizes operation readiness for a vendor/platform/version.
+type CoverageReport struct {
+	Vendor     string              `json:"vendor"`
+	Platform   string              `json:"platform"`
+	Version    string              `json:"version,omitempty"`
+	Operations []OperationCoverage `json:"operations"`
+}
+
+var dedicatedToolOperations = map[string]bool{
+	"get_interfaces":          true,
+	"get_system_version":      true,
+	"get_bgp_neighbors":       true,
+	"get_route_table":         true,
+	"get_system_alarms":       true,
+	"get_lldp_neighbors":      true,
+	"get_bgp_rib":             true,
+	"get_ospf_neighbors":      true,
+	"get_isis_adjacencies":    true,
+	"get_platform_components": true,
+	"get_transceiver_state":   true,
+	"get_acl":                 true,
+	"get_qos_interfaces":      true,
+	"get_routing_policy":      true,
+	"get_log_entries":         true,
+	"get_config_section":      true,
+	"run_ping":                true,
+	"run_traceroute":          true,
+	"get_configuration_diff":  true,
+}
+
+var diagnosticOperations = []string{
+	profiles.OpRunPing,
+	profiles.OpRunTraceroute,
+	profiles.OpGetConfigurationDiff,
+}
+
+var diagnosticTypedResults = map[string]bool{
+	profiles.OpRunPing:              true,
+	profiles.OpRunTraceroute:        true,
+	profiles.OpGetConfigurationDiff: true,
+}
+
+// BuildCoverageReport creates a testable operation coverage view.
+func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageReport {
+	report := CoverageReport{}
+	if profile == nil {
+		return report
+	}
+	report.Vendor = profile.Vendor
+	report.Platform = profile.Platform
+	report.Version = profile.Version
+
+	warningsByOp := warningsByOperation(warnings)
+	opIDs := make(map[string]struct{}, len(profile.Operations)+len(diagnosticOperations))
+	for opID := range profile.Operations {
+		opIDs[opID] = struct{}{}
+	}
+	for _, opID := range diagnosticOperations {
+		opIDs[opID] = struct{}{}
+	}
+	sortedOpIDs := make([]string, 0, len(opIDs))
+	for opID := range opIDs {
+		sortedOpIDs = append(sortedOpIDs, opID)
+	}
+	sort.Strings(sortedOpIDs)
+
+	for _, opID := range sortedOpIDs {
+		op := profile.Operations[opID]
+		coverage := OperationCoverage{
+			OperationID:           opID,
+			Warnings:              warningsByOp[opID],
+			DedicatedToolPresent:  dedicatedToolOperations[opID],
+			CanonicalMapPresent:   hasCanonicalMap(opID),
+			CanonicalModelPresent: hasCanonicalModel(opID),
+			SidecarOrigin:         GetOperationMappingOrigin(profile.Vendor, profile.Platform, profile.Version),
+		}
+		protocolSeen := map[string]bool{}
+		for _, pp := range op.Paths {
+			protocol := string(pp.Protocol)
+			if !protocolSeen[protocol] {
+				coverage.Protocols = append(coverage.Protocols, protocol)
+				protocolSeen[protocol] = true
+			}
+		}
+		for _, format := range []string{"json", "text"} {
+			if parsers.HasParser(parsers.ParserKey{Vendor: profile.Vendor, Platform: profile.Platform, Operation: opID, Format: format}) {
+				coverage.CLIParsers = append(coverage.CLIParsers, format)
+			}
+		}
+		if template, ok := profile.DiagnosticCommands[opID]; ok {
+			coverage.DiagnosticTransport = string(template.Transport)
+			coverage.DiagnosticTemplate = template.Command != ""
+		}
+		if diagnosticTypedResults[opID] {
+			coverage.DiagnosticTypedResult = true
+		}
+		coverage.DiagnosticReady = diagnosticReadinessForCoverage(coverage)
+		coverage.Readiness = readinessForCoverage(coverage)
+		report.Operations = append(report.Operations, coverage)
+	}
+	return report
+}
+
+func readinessForCoverage(c OperationCoverage) string {
+	if c.DiagnosticReady != "" {
+		return c.DiagnosticReady
+	}
+	if len(c.Protocols) == 0 {
+		return "registered"
+	}
+	if !c.CanonicalMapPresent || !c.CanonicalModelPresent {
+		return "schema-ready"
+	}
+	if len(c.CLIParsers) > 0 && !c.DedicatedToolPresent {
+		return "cli-ready"
+	}
+	if c.DedicatedToolPresent && len(c.Warnings) == 0 {
+		return "ops-ready"
+	}
+	if c.DedicatedToolPresent {
+		return "tool-ready"
+	}
+	return "canonical-ready"
+}
+
+func diagnosticReadinessForCoverage(c OperationCoverage) string {
+	if !isDiagnosticOperation(c.OperationID) {
+		return ""
+	}
+	if !c.DiagnosticTemplate {
+		return "registered"
+	}
+	if c.DiagnosticTransport != string(profiles.DiagnosticTransportCLI) {
+		return "registered"
+	}
+	if c.DedicatedToolPresent {
+		if c.DiagnosticTypedResult {
+			return "ops-ready"
+		}
+		return "tool-ready"
+	}
+	return "cli-ready"
+}
+
+func isDiagnosticOperation(operationID string) bool {
+	for _, opID := range diagnosticOperations {
+		if opID == operationID {
+			return true
+		}
+	}
+	return false
+}
+
+func warningsByOperation(warnings []string) map[string][]string {
+	out := map[string][]string{}
+	for _, warning := range warnings {
+		opID := ""
+		if strings.HasPrefix(warning, "operation ") {
+			rest := strings.TrimPrefix(warning, "operation ")
+			if idx := strings.Index(rest, ":"); idx >= 0 {
+				opID = rest[:idx]
+			}
+		}
+		if opID == "" {
+			opID = "_global"
+		}
+		out[opID] = append(out[opID], warning)
+	}
+	return out
+}
+
+func hasCanonicalMap(operationID string) bool {
+	_, ok := LookupCanonicalMap(operationID)
+	return ok
+}
+
+func hasCanonicalModel(operationID string) bool {
+	_, ok := LookupCanonicalModel(operationID)
+	return ok
+}

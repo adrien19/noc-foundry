@@ -116,6 +116,32 @@ func TestGetOperationMappings_HardcodedFallback(t *testing.T) {
 	}
 }
 
+func TestMergeSidecars_OverlayPreservesPrebuiltCatalog(t *testing.T) {
+	base := &SidecarOps{Operations: []SidecarOperation{
+		{ID: "get_interfaces", NativePaths: []string{"/base:interfaces"}},
+		{ID: "get_lldp_neighbors", NativePaths: []string{"/base:lldp"}},
+	}}
+	overlay := &SidecarOps{Operations: []SidecarOperation{
+		{ID: "get_interfaces", NativePaths: []string{"/overlay:interfaces"}},
+		{ID: "custom_op", NativePaths: []string{"/overlay:custom"}},
+	}}
+
+	merged := MergeSidecars(base, overlay)
+	got := merged.ToOperationMappings()
+	if len(got) != 3 {
+		t.Fatalf("merged mappings = %d, want 3", len(got))
+	}
+	if got[0].OperationID != "get_interfaces" || got[0].NativePaths[0] != "/overlay:interfaces" {
+		t.Fatalf("expected get_interfaces to be overlaid, got %+v", got[0])
+	}
+	if got[1].OperationID != "get_lldp_neighbors" {
+		t.Fatalf("expected base LLDP operation to be preserved, got %+v", got[1])
+	}
+	if got[2].OperationID != "custom_op" {
+		t.Fatalf("expected overlay custom operation to be appended, got %+v", got[2])
+	}
+}
+
 func TestExtendCanonicalMap_NoDuplicates(t *testing.T) {
 	m, ok := LookupCanonicalMap("get_interfaces")
 	if !ok {

@@ -266,6 +266,156 @@ func TestMapJSON_VendorExtensions(t *testing.T) {
 	}
 }
 
+func TestMapJSON_InterfaceCountersChildMapping(t *testing.T) {
+	data := []any{
+		map[string]any{
+			"name":        "ethernet-1/1",
+			"admin-state": "enable",
+			"oper-state":  "up",
+			"counters": map[string]any{
+				"in-octets":  float64(42),
+				"out-octets": float64(84),
+			},
+			"vendor-leaf": "keep-me",
+		},
+	}
+
+	mapper, err := NewSchemaMapper(nil, "get_interfaces")
+	if err != nil {
+		t.Fatalf("NewSchemaMapper: %v", err)
+	}
+	result, _, err := mapper.MapJSON(data)
+	if err != nil {
+		t.Fatalf("MapJSON: %v", err)
+	}
+
+	ifaces := result.([]models.InterfaceState)
+	if ifaces[0].Counters == nil {
+		t.Fatal("expected counters child mapping")
+	}
+	if ifaces[0].Counters.InOctets != 42 || ifaces[0].Counters.OutOctets != 84 {
+		t.Fatalf("unexpected counters: %+v", ifaces[0].Counters)
+	}
+	if ifaces[0].VendorExtensions["vendor-leaf"] != "keep-me" {
+		t.Fatalf("VendorExtensions lost unmapped field: %+v", ifaces[0].VendorExtensions)
+	}
+}
+
+func TestMapJSON_ACLChildEntries(t *testing.T) {
+	data := []any{
+		map[string]any{
+			"name": "protect-cpm",
+			"type": "ipv4",
+			"entries": map[string]any{
+				"entry": []any{
+					map[string]any{
+						"sequence":        "10",
+						"action":          "accept",
+						"protocol":        "tcp",
+						"matched-packets": float64(123),
+					},
+				},
+			},
+		},
+	}
+
+	mapper, err := NewSchemaMapper(nil, "get_acl")
+	if err != nil {
+		t.Fatalf("NewSchemaMapper: %v", err)
+	}
+	result, _, err := mapper.MapJSON(data)
+	if err != nil {
+		t.Fatalf("MapJSON: %v", err)
+	}
+
+	acls := result.([]models.ACL)
+	if len(acls[0].Entries) != 1 {
+		t.Fatalf("entries = %d, want 1", len(acls[0].Entries))
+	}
+	if got := acls[0].Entries[0].MatchedPackets; got != 123 {
+		t.Fatalf("MatchedPackets = %d, want 123", got)
+	}
+}
+
+func TestMapJSON_QoSChildQueuesAndSchedulers(t *testing.T) {
+	data := []any{
+		map[string]any{
+			"interface": "ethernet-1/1",
+			"queues": map[string]any{
+				"queue": []any{
+					map[string]any{"name": "0", "transmit-packets": float64(100)},
+				},
+			},
+			"schedulers": map[string]any{
+				"scheduler": []any{
+					map[string]any{"sequence": "1", "type": "strict", "weight": float64(10)},
+				},
+			},
+		},
+	}
+
+	mapper, err := NewSchemaMapper(nil, "get_qos_interfaces")
+	if err != nil {
+		t.Fatalf("NewSchemaMapper: %v", err)
+	}
+	result, _, err := mapper.MapJSON(data)
+	if err != nil {
+		t.Fatalf("MapJSON: %v", err)
+	}
+
+	qos := result.([]models.QoSInterface)
+	if len(qos[0].Queues) != 1 || qos[0].Queues[0].TransmitPackets != 100 {
+		t.Fatalf("unexpected queues: %+v", qos[0].Queues)
+	}
+	if len(qos[0].Schedulers) != 1 || qos[0].Schedulers[0].Weight != 10 {
+		t.Fatalf("unexpected schedulers: %+v", qos[0].Schedulers)
+	}
+}
+
+func TestMapJSON_SRLinuxLLDPNestedNeighbors(t *testing.T) {
+	data := map[string]any{
+		"srl_nokia-system:system": map[string]any{
+			"srl_nokia-lldp:lldp": map[string]any{
+				"interface": []any{
+					map[string]any{
+						"name": "ethernet-1/1",
+						"neighbor": []any{
+							map[string]any{
+								"system-name":        "leaf-1",
+								"port-id":            "ethernet-1/49",
+								"port-description":   "uplink",
+								"chassis-id":         "aa:bb:cc:dd:ee:ff",
+								"management-address": "192.0.2.10",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	mapper, err := NewSchemaMapper(nil, "get_lldp_neighbors")
+	if err != nil {
+		t.Fatalf("NewSchemaMapper: %v", err)
+	}
+	result, quality, err := mapper.MapJSON(data)
+	if err != nil {
+		t.Fatalf("MapJSON: %v", err)
+	}
+
+	neighbors := result.([]models.LLDPNeighbor)
+	if len(neighbors) != 1 {
+		t.Fatalf("neighbors = %d, want 1; quality=%+v", len(neighbors), quality)
+	}
+	got := neighbors[0]
+	if got.LocalInterface != "ethernet-1/1" || got.RemoteSystemName != "leaf-1" || got.RemotePortID != "ethernet-1/49" {
+		t.Fatalf("unexpected LLDP neighbor: %+v", got)
+	}
+	if quality.MappingQuality != models.MappingExact {
+		t.Fatalf("quality = %q, want exact", quality.MappingQuality)
+	}
+}
+
 func TestMapJSON_SystemVersion_SRLinux(t *testing.T) {
 	// SRL system version comes from system/information + system/name.
 	data := map[string]any{

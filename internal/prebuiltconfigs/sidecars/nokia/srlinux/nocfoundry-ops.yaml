@@ -8,14 +8,397 @@
 # schemaRepos version configuration.
 operations:
   - id: get_interfaces
+    data: state
+    preferred: [gnmi_openconfig, netconf_openconfig, gnmi_native, netconf_native]
     native_paths:
       - /srl_nokia-interfaces:interface
     oc_paths:
       - /openconfig-interfaces:interfaces/interface
 
+  - id: get_interface_counters
+    data: state
+    native_paths:
+      - /srl_nokia-interfaces:interface/statistics
+    oc_paths:
+      - /openconfig-interfaces:interfaces/interface/state/counters
+
+  - id: get_lldp_neighbors
+    data: state
+    parameters:
+      - name: interface
+        path_key: name
+        description: Optional local interface to scope LLDP neighbors.
+    native_paths:
+      - /srl_nokia-system:system/srl_nokia-lldp:lldp/interface/neighbor
+    oc_paths:
+      - /openconfig-lldp:lldp/interfaces/interface/neighbors/neighbor/state
+
+  - id: get_vlans
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/bridge-table
+    oc_paths:
+      - /openconfig-vlan:vlans/vlan/state
+
+  - id: get_lacp
+    data: state
+    native_paths:
+      - /srl_nokia-interfaces:interface/srl_nokia-lag:lag
+    oc_paths:
+      - /openconfig-lacp:lacp/interfaces/interface/state
+      - /openconfig-lacp:lacp/interfaces/interface/members/member/state
+
+  - id: get_mac_table
+    data: state
+    limits:
+      default_count: 1000
+      max_count: 10000
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/bridge-table/mac-table
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/fdb/mac-table/entries/entry/state
+
+  - id: get_stp
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols
+    oc_paths:
+      - /openconfig-spanning-tree:stp
+
   - id: get_system_version
+    data: state
     native_paths:
       - /srl_nokia-system:system/information
       - /srl_nokia-system:system/name
     oc_paths:
       - /openconfig-system:system/state
+
+  - id: get_bgp_neighbors
+    data: state
+    parameters:
+      - name: network_instance
+        path_key: name
+        default: default
+      - name: neighbor
+        path_key: peer-address
+        description: Optional BGP neighbor address.
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-bgp:bgp/neighbor
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state
+
+  - id: get_bgp_rib
+    data: state
+    preferred: [gnmi_native, netconf_native, gnmi_openconfig, netconf_openconfig]
+    parameters:
+      - name: network_instance
+        path_key: name
+        default: default
+      - name: afi_safi
+        required: true
+        allowed: [ipv4-unicast, ipv6-unicast, l2vpn-evpn]
+      - name: prefix
+        path_key: prefix
+        target_path: route
+        target_container: route
+        gnmi_path_template: /srl_nokia-network-instance:network-instance[name={network_instance}]/protocols/srl_nokia-bgp:bgp/rib/afi-safi[afi-safi-name={afi_safi}]/ipv4-unicast/loc-rib/routes/route[prefix={prefix}]
+        netconf_filter_template: <network-instance xmlns="urn:nokia.com:srlinux:general:network-instance"><name>{network_instance}</name><protocols><bgp xmlns="urn:nokia.com:srlinux:bgp:yang:bgp"><rib><afi-safi><afi-safi-name>{afi_safi}</afi-safi-name><ipv4-unicast><loc-rib><routes><route><prefix>{prefix}</prefix></route></routes></loc-rib></ipv4-unicast></afi-safi></rib></bgp></protocols></network-instance>
+    limits:
+      default_count: 1000
+      max_count: 10000
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-bgp:bgp/rib
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/bgp/rib
+
+  - id: get_ospf_neighbors
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-ospf:ospf/instance/area/interface/neighbor
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/ospfv2/areas/area/interfaces/interface/neighbors/neighbor/state
+
+  - id: get_ospf_database
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-ospf:ospf/instance/area/lsdb
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/ospfv2/areas/area/lsdb
+
+  - id: get_isis_adjacencies
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-isis:isis/instance/interface/level/adjacency
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/isis/interfaces/interface/levels/level/adjacencies/adjacency/state
+
+  - id: get_route_table
+    data: state
+    parameters:
+      - name: network_instance
+        path_key: name
+        default: default
+      - name: prefix
+        path_key: prefix
+        target_path: route
+        target_container: route
+        gnmi_path_template: /srl_nokia-network-instance:network-instance[name={network_instance}]/route-table/srl_nokia-ip-route-tables:ipv4-unicast/route[prefix={prefix}]
+        netconf_filter_template: <network-instance xmlns="urn:nokia.com:srlinux:general:network-instance"><name>{network_instance}</name><route-table><ipv4-unicast xmlns="urn:nokia.com:srlinux:ip-route-tables"><route><prefix>{prefix}</prefix></route></ipv4-unicast></route-table></network-instance>
+      - name: protocol
+        path_key: origin-protocol
+        target_container: route
+    limits:
+      default_count: 1000
+      max_count: 10000
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/route-table/srl_nokia-ip-route-tables:ipv4-unicast/route
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/afts/ipv4-unicast/ipv4-entry
+
+  - id: get_static_routes
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/static-routes
+    oc_paths:
+      - /openconfig-local-routing:local-routes/static-routes/static/config
+
+  - id: get_mpls_lsps
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/mpls
+    oc_paths:
+      - /openconfig-mpls:mpls
+
+  - id: get_segment_routing
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/segment-routing
+    oc_paths:
+      - /openconfig-segment-routing:segment-routing
+
+  - id: get_multicast
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/pim
+
+  - id: get_bfd_sessions
+    data: state
+    native_paths:
+      - /srl_nokia-bfd:bfd
+    oc_paths:
+      - /openconfig-bfd:bfd
+
+  - id: get_network_instances
+    data: state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/state
+
+  - id: get_system_alarms
+    data: state
+    native_paths:
+      - /srl_nokia-system:system/srl_nokia-system-alarm:alarm
+    oc_paths:
+      - /openconfig-system:system/alarms/alarm/state
+
+  - id: get_system_cpu
+    data: state
+    native_paths:
+      - /srl_nokia-platform:platform/control/cpu
+    oc_paths:
+      - /openconfig-system:system/cpus/cpu/state
+
+  - id: get_system_memory
+    data: state
+    native_paths:
+      - /srl_nokia-platform:platform/control/memory
+    oc_paths:
+      - /openconfig-system:system/memory/state
+
+  - id: get_platform_components
+    data: state
+    native_paths:
+      - /srl_nokia-platform:platform
+    oc_paths:
+      - /openconfig-platform:components/component/state
+
+  - id: get_transceiver_state
+    data: state
+    parameters:
+      - name: interface
+        path_key: name
+    native_paths:
+      - /srl_nokia-platform:platform/chassis/linecard/forwarding-complex/pipeline/port/transceiver
+    oc_paths:
+      - /openconfig-platform:components/component/transceiver/state
+
+  - id: get_system_ntp
+    data: state
+    native_paths:
+      - /srl_nokia-system:system/srl_nokia-ntp:ntp
+    oc_paths:
+      - /openconfig-system:system/ntp
+
+  - id: get_system_dns
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-system:system/dns
+    oc_paths:
+      - /openconfig-system:system/dns/config
+
+  - id: get_system_aaa
+    data: config_state
+    datastore: running
+    native_paths:
+      - /srl_nokia-system:system/aaa
+    oc_paths:
+      - /openconfig-system:system/aaa
+
+  - id: get_system_logging
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-system:system/logging
+    oc_paths:
+      - /openconfig-system:system/logging
+
+  - id: get_system_processes
+    data: state
+    native_paths:
+      - /srl_nokia-system:system/processes
+    oc_paths:
+      - /openconfig-system:system/processes/process/state
+
+  - id: get_acl
+    data: config_state
+    datastore: running
+    native_paths:
+      - /srl_nokia-acl:acl
+    oc_paths:
+      - /openconfig-acl:acl/acl-sets/acl-set
+      - /openconfig-acl:acl/interfaces
+
+  - id: get_acl_counters
+    data: state
+    limits:
+      default_count: 1000
+      max_count: 10000
+    native_paths:
+      - /srl_nokia-acl:acl
+    oc_paths:
+      - /openconfig-acl:acl/acl-sets/acl-set/acl-entries/acl-entry/state
+
+  - id: get_policy_forwarding
+    data: config_state
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/policy-forwarding
+    oc_paths:
+      - /openconfig-policy-forwarding:policy-forwarding
+
+  - id: get_qos_interfaces
+    data: state
+    parameters:
+      - name: interface
+        path_key: interface-id
+    limits:
+      default_count: 1000
+      max_count: 10000
+    native_paths:
+      - /srl_nokia-qos:qos/interfaces
+    oc_paths:
+      - /openconfig-qos:qos/interfaces/interface
+
+  - id: get_qos_classifiers
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-qos:qos/classifiers
+    oc_paths:
+      - /openconfig-qos:qos/classifiers/classifier
+
+  - id: get_routing_policy
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-routing-policy:routing-policy
+    oc_paths:
+      - /openconfig-routing-policy:routing-policy/policy-definitions/policy-definition
+
+  - id: get_prefix_sets
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-routing-policy:routing-policy/prefix-set
+    oc_paths:
+      - /openconfig-routing-policy:routing-policy/defined-sets/prefix-sets/prefix-set
+
+  - id: get_community_sets
+    data: config
+    datastore: running
+    native_paths:
+      - /srl_nokia-routing-policy:routing-policy/community-set
+    oc_paths:
+      - /openconfig-routing-policy:routing-policy/defined-sets/bgp-defined-sets/community-sets/community-set
+
+  - id: get_evpn_instances
+    data: state
+    preferred: [gnmi_native, netconf_native, gnmi_openconfig, netconf_openconfig]
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-bgp-evpn:bgp-evpn
+    oc_paths:
+      - /openconfig-network-instance:network-instances/network-instance/protocols/protocol/bgp
+
+  - id: get_vxlan_tunnels
+    data: state
+    preferred: [gnmi_native, netconf_native]
+    native_paths:
+      - /srl_nokia-tunnel:tunnel
+
+  - id: get_ethernet_segments
+    data: state
+    preferred: [gnmi_native, netconf_native, gnmi_openconfig, netconf_openconfig]
+    native_paths:
+      - /srl_nokia-network-instance:network-instance/protocols/srl_nokia-bgp-evpn:bgp-evpn/ethernet-segment
+    oc_paths:
+      - /openconfig-ethernet-segments:ethernet-segments
+
+  - id: get_log_entries
+    data: raw
+    limits:
+      default_count: 100
+      max_count: 1000
+
+  - id: get_configuration_diff
+    data: rpc
+
+  - id: get_environment
+    data: state
+    native_paths:
+      - /srl_nokia-platform:platform
+    oc_paths:
+      - /openconfig-platform:components/component/state
+
+  - id: get_sflow
+    data: config_state
+    native_paths:
+      - /srl_nokia-sflow:sflow
+    oc_paths:
+      - /openconfig-sampling:sampling/sflow
+
+  - id: get_running_config
+    data: raw
+    datastore: running
+    limits:
+      max_bytes: 1048576
+
+  - id: get_config_section
+    data: config
+    datastore: running
+    parameters:
+      - name: path
+        required: true

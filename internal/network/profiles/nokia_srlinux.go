@@ -21,6 +21,31 @@ func init() {
 	Register(&Profile{
 		Vendor:   "nokia",
 		Platform: "srlinux",
+		DiagnosticCommands: map[string]DiagnosticCommandTemplate{
+			OpRunPing: {
+				OperationID: OpRunPing,
+				Transport:   DiagnosticTransportCLI,
+				Command:     "ping {target} -c {count}",
+				Optional: []DiagnosticCommandFragment{
+					{Parameter: "vrf", Template: " network-instance {vrf}"},
+					{Parameter: "source", Template: " -I {source}"},
+				},
+			},
+			OpRunTraceroute: {
+				OperationID: OpRunTraceroute,
+				Transport:   DiagnosticTransportCLI,
+				Command:     "traceroute {target} -m {max_hops}",
+				Optional: []DiagnosticCommandFragment{
+					{Parameter: "vrf", Template: " network-instance {vrf}"},
+					{Parameter: "source", Template: " -s {source}"},
+				},
+			},
+			OpGetConfigurationDiff: {
+				OperationID: OpGetConfigurationDiff,
+				Transport:   DiagnosticTransportCLI,
+				Command:     "diff {source} {target}",
+			},
+		},
 		Operations: map[string]OperationDescriptor{
 			OpGetInterfaces: {
 				OperationID: OpGetInterfaces,
@@ -52,6 +77,54 @@ func init() {
 					{
 						Protocol: ProtocolCLI,
 						Command:  "show version",
+						Format:   "text",
+					},
+				},
+			},
+			OpGetBGPNeighbors: {
+				OperationID: OpGetBGPNeighbors,
+				Paths: []ProtocolPath{
+					{
+						Protocol:  ProtocolCLI,
+						Command:   "show network-instance default protocols bgp neighbor",
+						Format:    "json",
+						FormatArg: "| as json",
+					},
+					{
+						Protocol: ProtocolCLI,
+						Command:  "show network-instance default protocols bgp neighbor",
+						Format:   "text",
+					},
+				},
+			},
+			OpGetRouteTable: {
+				OperationID: OpGetRouteTable,
+				Paths: []ProtocolPath{
+					{
+						Protocol:  ProtocolCLI,
+						Command:   "show network-instance default route-table",
+						Format:    "json",
+						FormatArg: "| as json",
+					},
+					{
+						Protocol: ProtocolCLI,
+						Command:  "show network-instance default route-table",
+						Format:   "text",
+					},
+				},
+			},
+			OpGetSystemAlarms: {
+				OperationID: OpGetSystemAlarms,
+				Paths: []ProtocolPath{
+					{
+						Protocol:  ProtocolCLI,
+						Command:   "show system alarm",
+						Format:    "json",
+						FormatArg: "| as json",
+					},
+					{
+						Protocol: ProtocolCLI,
+						Command:  "show system alarm",
 						Format:   "text",
 					},
 				},

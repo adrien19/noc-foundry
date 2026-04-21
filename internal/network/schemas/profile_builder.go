@@ -69,36 +69,58 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 			}
 		}
 
-		// Build combined ProtocolPaths (one per protocol).
-		var paths []profiles.ProtocolPath
+		byProtocol := make(map[profiles.Protocol]profiles.ProtocolPath)
 		if len(ocGnmiPaths) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolGnmiOpenConfig] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolGnmiOpenConfig,
 				Paths:    ocGnmiPaths,
-			})
+			}
 		}
 		if len(ocNetconfFilters) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolNetconfOpenConfig] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolNetconfOpenConfig,
 				Filter:   combineNetconfFilters(ocNetconfFilters),
-			})
+			}
 		}
 		if len(nativeGnmiPaths) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolGnmiNative] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolGnmiNative,
 				Paths:    nativeGnmiPaths,
-			})
+			}
 		}
 		if len(nativeNetconfFilters) > 0 {
-			paths = append(paths, profiles.ProtocolPath{
+			byProtocol[profiles.ProtocolNetconfNative] = profiles.ProtocolPath{
 				Protocol: profiles.ProtocolNetconfNative,
 				Filter:   combineNetconfFilters(nativeNetconfFilters),
-			})
+			}
 		}
 
+		for proto, pp := range byProtocol {
+			pp.Parameters = m.profileParameters()
+			pp.Limits = m.profileLimits()
+			if isNetconfProtocol(proto) && m.dataKind() == OperationDataConfig {
+				pp.UseGetConfig = true
+				pp.Datastore = m.datastore()
+				byProtocol[proto] = pp
+			}
+			if isNetconfProtocol(proto) && m.dataKind() == OperationDataConfigState {
+				// TODO(schema-ops): Split config_state operations into paired
+				// config and state retrieval paths when both are declared in the
+				// sidecar. For now NETCONF <get> preserves current behavior and
+				// returns available config+state, but pure config datastores may
+				// need an additional get-config RPC for exact config provenance.
+				byProtocol[proto] = pp
+			}
+		}
+
+		paths := orderedProtocolPaths(m, byProtocol)
 		if len(paths) > 0 {
 			ops[m.OperationID] = profiles.OperationDescriptor{
 				OperationID: m.OperationID,
+				Data:        m.profileDataKind(),
+				Datastore:   m.datastore(),
+				Parameters:  m.profileParameters(),
+				Limits:      m.profileLimits(),
 				Paths:       paths,
 			}
 		} else {
@@ -113,6 +135,65 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 	}
 
 	return profile, warnings
+}
+
+func orderedProtocolPaths(m OperationMapping, byProtocol map[profiles.Protocol]profiles.ProtocolPath) []profiles.ProtocolPath {
+	order := defaultProtocolPreference()
+	if len(m.Preferred) > 0 {
+		order = parseProtocolPreference(m.Preferred)
+	}
+
+	seen := make(map[profiles.Protocol]bool, len(order))
+	var paths []profiles.ProtocolPath
+	for _, proto := range order {
+		pp, ok := byProtocol[proto]
+		if !ok {
+			continue
+		}
+		paths = append(paths, pp)
+		seen[proto] = true
+	}
+
+	// Preserve any protocols omitted from a custom preference after preferred
+	// entries. This keeps sidecar preference order additive, not destructive.
+	for _, proto := range defaultProtocolPreference() {
+		if seen[proto] {
+			continue
+		}
+		if pp, ok := byProtocol[proto]; ok {
+			paths = append(paths, pp)
+		}
+	}
+	return paths
+}
+
+func defaultProtocolPreference() []profiles.Protocol {
+	return []profiles.Protocol{
+		profiles.ProtocolGnmiOpenConfig,
+		profiles.ProtocolNetconfOpenConfig,
+		profiles.ProtocolGnmiNative,
+		profiles.ProtocolNetconfNative,
+	}
+}
+
+func parseProtocolPreference(preferred []string) []profiles.Protocol {
+	out := make([]profiles.Protocol, 0, len(preferred))
+	for _, raw := range preferred {
+		switch strings.ToLower(strings.TrimSpace(raw)) {
+		case string(profiles.ProtocolGnmiOpenConfig), "gnmi_oc", "openconfig_gnmi":
+			out = append(out, profiles.ProtocolGnmiOpenConfig)
+		case string(profiles.ProtocolNetconfOpenConfig), "netconf_oc", "openconfig_netconf":
+			out = append(out, profiles.ProtocolNetconfOpenConfig)
+		case string(profiles.ProtocolGnmiNative), "native_gnmi":
+			out = append(out, profiles.ProtocolGnmiNative)
+		case string(profiles.ProtocolNetconfNative), "native_netconf":
+			out = append(out, profiles.ProtocolNetconfNative)
+		}
+	}
+	if len(out) == 0 {
+		return defaultProtocolPreference()
+	}
+	return out
 }
 
 // combineNetconfFilters merges multiple NETCONF subtree filters.
@@ -232,9 +313,11 @@ func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile 
 	}
 
 	merged := &profiles.Profile{
-		Vendor:     schemaProfile.Vendor,
-		Platform:   schemaProfile.Platform,
-		Operations: make(map[string]profiles.OperationDescriptor),
+		Vendor:             schemaProfile.Vendor,
+		Platform:           schemaProfile.Platform,
+		Version:            schemaProfile.Version,
+		Operations:         make(map[string]profiles.OperationDescriptor),
+		DiagnosticCommands: mergeDiagnosticCommands(schemaProfile.DiagnosticCommands, fallback.DiagnosticCommands),
 	}
 
 	// Start with all operations from the fallback.
@@ -267,6 +350,10 @@ func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile 
 
 		merged.Operations[opID] = profiles.OperationDescriptor{
 			OperationID: opID,
+			Data:        schemaOp.Data,
+			Datastore:   schemaOp.Datastore,
+			Parameters:  schemaOp.Parameters,
+			Limits:      schemaOp.Limits,
 			Paths:       mergedPaths,
 		}
 	}
@@ -274,6 +361,24 @@ func MergeProfiles(schemaProfile, fallback *profiles.Profile) *profiles.Profile 
 	return merged
 }
 
+func mergeDiagnosticCommands(primary, fallback map[string]profiles.DiagnosticCommandTemplate) map[string]profiles.DiagnosticCommandTemplate {
+	if len(primary) == 0 && len(fallback) == 0 {
+		return nil
+	}
+	merged := make(map[string]profiles.DiagnosticCommandTemplate, len(primary)+len(fallback))
+	for k, v := range fallback {
+		merged[k] = v
+	}
+	for k, v := range primary {
+		merged[k] = v
+	}
+	return merged
+}
+
 func isCLIProtocol(p profiles.Protocol) bool {
 	return p == profiles.ProtocolCLI
+}
+
+func isNetconfProtocol(p profiles.Protocol) bool {
+	return p == profiles.ProtocolNetconfOpenConfig || p == profiles.ProtocolNetconfNative
 }

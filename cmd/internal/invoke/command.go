@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/adrien19/noc-foundry/cmd/internal"
 	"github.com/adrien19/noc-foundry/internal/devicegroups"
@@ -120,7 +121,9 @@ func runInvoke(cmd *cobra.Command, args []string, opts *internal.NOCFoundryOptio
 
 	params := make(map[string]any)
 	if paramsInput != "" {
-		if err := json.Unmarshal([]byte(paramsInput), &params); err != nil {
+		decoder := json.NewDecoder(strings.NewReader(paramsInput))
+		decoder.UseNumber()
+		if err := decoder.Decode(&params); err != nil {
 			errMsg := fmt.Errorf("params must be a valid JSON string: %w", err)
 			opts.Logger.ErrorContext(ctx, errMsg.Error())
 			return errMsg

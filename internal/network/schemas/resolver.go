@@ -51,14 +51,16 @@ func (b *SchemaBundle) ResolvePath(yangPath string) (*ResolvedPaths, error) {
 	revision := ""
 	moduleName := ""
 	if mod != nil {
-		namespace = mod.Namespace.Name
+		if mod.Namespace != nil {
+			namespace = mod.Namespace.Name
+		}
 		moduleName = mod.Name
 		if len(mod.Revision) > 0 {
 			revision = latestRevision(mod.Revision)
 		}
 	}
 
-	gnmiPath := buildGnmiPath(yangPath, moduleName)
+	gnmiPath := buildGnmiPathFromEntries(entries, yangPath, moduleName)
 	netconfFilter := buildNestedNetconfFilter(entries)
 
 	return &ResolvedPaths{
@@ -250,6 +252,34 @@ func buildGnmiPath(yangPath, moduleName string) string {
 	return "/" + strings.Join(result, "/")
 }
 
+// buildGnmiPathFromEntries constructs a gNMI path using the resolved schema
+// entry chain so augmented descendants keep their own module prefixes.
+func buildGnmiPathFromEntries(entries []*yang.Entry, yangPath, fallbackModule string) string {
+	if len(entries) == 0 {
+		return buildGnmiPath(yangPath, fallbackModule)
+	}
+
+	segments := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		moduleName := fallbackModule
+		if mod := entryModule(entry); mod != nil && mod.Name != "" {
+			moduleName = mod.Name
+		}
+		if moduleName != "" {
+			segments = append(segments, moduleName+":"+entry.Name)
+			continue
+		}
+		segments = append(segments, entry.Name)
+	}
+	if len(segments) == 0 {
+		return buildGnmiPath(yangPath, fallbackModule)
+	}
+	return "/" + strings.Join(segments, "/")
+}
+
 // buildNestedNetconfFilter builds a NETCONF subtree filter XML element
 // from the full chain of entries (root to leaf). For single-segment paths
 // it produces a self-closing element; for multi-segment paths it produces
@@ -268,7 +298,9 @@ func buildNestedNetconfFilter(entries []*yang.Entry) string {
 		entry := entries[i]
 		ns := ""
 		if mod := entryModule(entry); mod != nil {
-			ns = mod.Namespace.Name
+			if mod.Namespace != nil {
+				ns = mod.Namespace.Name
+			}
 		}
 
 		if result == "" {

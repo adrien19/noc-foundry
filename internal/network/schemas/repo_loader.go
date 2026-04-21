@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adrien19/noc-foundry/internal/prebuiltconfigs"
 	"github.com/goccy/go-yaml"
 )
 
@@ -90,14 +89,15 @@ func LoadFromRepos(store *SchemaStore, repos []RepoConfig, cacheDir string) (int
 
 			// Resolve operations sidecar using the priority chain:
 			//   1. Explicit opsFile from config
-			//   2. nocfoundry-ops.yaml in the cloned repo
+			//   2. Prebuilt embedded default plus nocfoundry-ops.yaml overlay
+			//      from the cloned repo
 			//   3. Prebuilt embedded default for vendor/platform
 			// The hardcoded fallback in GetOperationMappings is the final
 			// safety net and is checked at profile-build time.
 			if sidecar, source, serr := resolveSidecar(v, yangDir, repoCfg.Name); serr != nil {
 				errs = append(errs, serr)
 			} else if sidecar != nil {
-				RegisterSidecarMappings(key, sidecar.ToOperationMappings())
+				RegisterSidecarMappingsWithOrigin(key, sidecar.ToOperationMappings(), source)
 				sidecar.ExtendCanonicalMaps()
 				slog.Info("loaded vendor sidecar",
 					"source", source,
@@ -151,20 +151,21 @@ func resolveSidecar(v RepoVersion, yangDir, repoName string) (*SidecarOps, strin
 		return sidecar, "opsFile:" + v.OpsFile, nil
 	}
 
-	// 2. nocfoundry-ops.yaml in the cloned repo directory.
+	// 2. Prebuilt embedded default plus nocfoundry-ops.yaml overlay in the
+	// cloned repo directory.
+	prebuilt, hasPrebuilt, perr := LoadPrebuiltSidecar(v.Vendor, v.Platform)
+	if perr != nil {
+		return nil, "", perr
+	}
 	if sidecar, ok, err := TryLoadSidecar(yangDir); err != nil {
 		return nil, "", fmt.Errorf("sidecar for %s from repo %q: %w", key.String(), repoName, err)
 	} else if ok {
-		return sidecar, "repo:" + repoName, nil
+		return MergeSidecars(prebuilt, sidecar), "repo:" + repoName, nil
 	}
 
 	// 3. Prebuilt embedded default for vendor/platform.
-	if data, err := prebuiltconfigs.GetSidecar(v.Vendor, v.Platform); err == nil {
-		var ops SidecarOps
-		if uerr := yaml.Unmarshal(data, &ops); uerr != nil {
-			return nil, "", fmt.Errorf("parsing prebuilt sidecar for %s/%s: %w", v.Vendor, v.Platform, uerr)
-		}
-		return &ops, "prebuilt:" + v.Vendor + "/" + v.Platform, nil
+	if hasPrebuilt {
+		return prebuilt, "prebuilt:" + v.Vendor + "/" + v.Platform, nil
 	}
 
 	// No sidecar found at any level; the hardcoded fallback in

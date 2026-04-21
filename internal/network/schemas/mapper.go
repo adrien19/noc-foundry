@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/adrien19/noc-foundry/internal/network/models"
@@ -34,7 +36,8 @@ type SchemaMapper struct {
 	// fieldIndex maps YANGLeaf → FieldMapping for O(1) lookup during walk.
 	fieldIndex map[string]FieldMapping
 	// aliasSet contains container names that should be merged upward.
-	aliasSet map[string]bool
+	aliasSet      map[string]bool
+	childMappings []ChildMapping
 }
 
 // NewSchemaMapper creates a mapper for the given operation and schema bundle.
@@ -58,10 +61,11 @@ func NewSchemaMapper(bundle *SchemaBundle, operationID string) (*SchemaMapper, e
 	}
 
 	return &SchemaMapper{
-		bundle:     bundle,
-		cmap:       cmap,
-		fieldIndex: fieldIndex,
-		aliasSet:   aliasSet,
+		bundle:        bundle,
+		cmap:          cmap,
+		fieldIndex:    fieldIndex,
+		aliasSet:      aliasSet,
+		childMappings: cmap.ChildMappings,
 	}, nil
 }
 
@@ -74,16 +78,76 @@ func NewSchemaMapper(bundle *SchemaBundle, operationID string) (*SchemaMapper, e
 //
 // Returns a typed payload (e.g. []models.InterfaceState) and quality metadata.
 func (m *SchemaMapper) MapJSON(data any) (any, models.QualityMeta, error) {
+	if m.cmap.OperationID == "get_lldp_neighbors" {
+		data = expandLLDPNeighbors(data)
+	}
 	// Unwrap vendor-namespaced wrappers recursively.
 	items := m.unwrapToList(data)
 
-	switch m.cmap.ModelType {
-	case "InterfaceState":
-		return m.mapInterfaces(items)
-	case "SystemVersion":
-		return m.mapSystemVersion(items)
-	default:
-		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("unsupported model type %q", m.cmap.ModelType)
+	descriptor, ok := LookupCanonicalModel(m.cmap.OperationID)
+	if !ok {
+		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("no canonical model registered for operation %q", m.cmap.OperationID)
+	}
+	if descriptor.ModelType != m.cmap.ModelType {
+		return nil, models.QualityMeta{MappingQuality: models.MappingPartial}, fmt.Errorf("canonical map model type %q does not match registered model %q for operation %q", m.cmap.ModelType, descriptor.ModelType, m.cmap.OperationID)
+	}
+	return m.mapGeneric(items, descriptor)
+}
+
+func expandLLDPNeighbors(data any) any {
+	var out []any
+	collectLLDPNeighbors(data, "", &out)
+	if len(out) == 0 {
+		return data
+	}
+	return out
+}
+
+func collectLLDPNeighbors(data any, localInterface string, out *[]any) {
+	switch v := data.(type) {
+	case map[string]any:
+		currentLocal := localInterface
+		for _, key := range []string{"name", "interface-name", "local-interface", "local-port"} {
+			if raw, ok := v[key]; ok && isScalar(raw) {
+				currentLocal = toString(raw)
+				break
+			}
+		}
+		if raw, ok := v["neighbor"]; ok {
+			appendLLDPNeighborItems(raw, currentLocal, out)
+		}
+		if raw, ok := v["neighbors"]; ok {
+			appendLLDPNeighborItems(raw, currentLocal, out)
+		}
+		for _, child := range v {
+			collectLLDPNeighbors(child, currentLocal, out)
+		}
+	case []any:
+		for _, item := range v {
+			collectLLDPNeighbors(item, localInterface, out)
+		}
+	case []map[string]any:
+		for _, item := range v {
+			collectLLDPNeighbors(item, localInterface, out)
+		}
+	}
+}
+
+func appendLLDPNeighborItems(raw any, localInterface string, out *[]any) {
+	maxInt := int(^uint(0) >> 1)
+	for _, item := range rawToMapSlice(raw) {
+		neighborCap := len(item)
+		if neighborCap < maxInt {
+			neighborCap++
+		}
+		neighbor := make(map[string]any, neighborCap)
+		for k, v := range item {
+			neighbor[k] = v
+		}
+		if localInterface != "" {
+			neighbor["local-interface"] = localInterface
+		}
+		*out = append(*out, neighbor)
 	}
 }
 
@@ -101,107 +165,22 @@ func (m *SchemaMapper) MapXML(rawXML []byte) (any, models.QualityMeta, error) {
 	return m.MapJSON(generic)
 }
 
-// ---------------------------------------------------------------------------
-// Interface mapping
-// ---------------------------------------------------------------------------
-
-func (m *SchemaMapper) mapInterfaces(items []map[string]any) (any, models.QualityMeta, error) {
-	interfaces := make([]models.InterfaceState, 0, len(items))
-	for _, item := range items {
-		iface := m.extractInterface(item)
-		if iface.Name != "" {
-			interfaces = append(interfaces, iface)
-		}
-	}
-	quality := qualityForInterfaces(interfaces)
-	return interfaces, quality, nil
-}
-
-func (m *SchemaMapper) extractInterface(data map[string]any) models.InterfaceState {
-	flat := m.flattenWithAliases(data)
-
-	iface := models.InterfaceState{}
-	var extensions map[string]any
-
-	for key, val := range flat {
-		fm, ok := m.fieldIndex[key]
-		if !ok {
-			// Unmapped leaf → VendorExtensions
-			if extensions == nil {
-				extensions = make(map[string]any)
+func (m *SchemaMapper) mapGeneric(items []map[string]any, descriptor CanonicalModelDescriptor) (any, models.QualityMeta, error) {
+	if descriptor.List {
+		out := reflect.MakeSlice(reflect.SliceOf(descriptor.Type), 0, len(items))
+		for _, item := range items {
+			value, mapped := m.extractGeneric(item, descriptor.Type)
+			if !mapped || !hasRequiredFields(value, descriptor.RequiredFields) {
+				continue
 			}
-			extensions[key] = val
-			continue
+			out = reflect.Append(out, value)
 		}
-		m.setInterfaceField(&iface, fm, val)
-	}
-	iface.VendorExtensions = extensions
-	return iface
-}
-
-func (m *SchemaMapper) setInterfaceField(iface *models.InterfaceState, fm FieldMapping, val any) {
-	s := toString(val)
-	if fm.Normalizer != "" {
-		s = NormalizeValue(fm.Normalizer, s)
+		if out.Len() == 0 {
+			return out.Interface(), models.QualityMeta{MappingQuality: models.MappingPartial, Warnings: []string{"no canonical records extracted"}}, nil
+		}
+		return out.Interface(), models.QualityMeta{MappingQuality: models.MappingExact}, nil
 	}
 
-	switch fm.CanonicalField {
-	case "Name":
-		if iface.Name == "" {
-			iface.Name = s
-		}
-	case "Type":
-		if iface.Type == "" {
-			iface.Type = s
-		}
-	case "AdminStatus":
-		if iface.AdminStatus == "" {
-			iface.AdminStatus = s
-		}
-	case "OperStatus":
-		if iface.OperStatus == "" {
-			iface.OperStatus = s
-		}
-	case "Description":
-		if iface.Description == "" {
-			iface.Description = s
-		}
-	case "MTU":
-		if iface.MTU == 0 {
-			iface.MTU = toInt(val)
-		}
-	case "Speed":
-		if iface.Speed == "" {
-			iface.Speed = s
-		}
-	}
-}
-
-func qualityForInterfaces(ifaces []models.InterfaceState) models.QualityMeta {
-	if len(ifaces) == 0 {
-		return models.QualityMeta{MappingQuality: models.MappingPartial, Warnings: []string{"no interfaces extracted"}}
-	}
-	allComplete := true
-	for _, i := range ifaces {
-		if i.AdminStatus == "" || i.OperStatus == "" {
-			allComplete = false
-			break
-		}
-	}
-	if allComplete {
-		return models.QualityMeta{MappingQuality: models.MappingExact}
-	}
-	return models.QualityMeta{MappingQuality: models.MappingDerived}
-}
-
-// ---------------------------------------------------------------------------
-// SystemVersion mapping
-// ---------------------------------------------------------------------------
-
-func (m *SchemaMapper) mapSystemVersion(items []map[string]any) (any, models.QualityMeta, error) {
-	// SystemVersion is typically a single object, not a list.
-	// Merge all items into one flat map (handles multi-path responses like
-	// SRL system/information + system/name).
 	merged := make(map[string]any)
 	for _, item := range items {
 		flat := m.flattenWithAliases(item)
@@ -211,57 +190,192 @@ func (m *SchemaMapper) mapSystemVersion(items []map[string]any) (any, models.Qua
 			}
 		}
 	}
+	value, mapped := m.extractGeneric(merged, descriptor.Type)
+	if !mapped || !hasRequiredFields(value, descriptor.RequiredFields) {
+		return value.Interface(), models.QualityMeta{MappingQuality: models.MappingPartial, Warnings: []string{"canonical singleton payload is incomplete"}}, nil
+	}
+	return value.Interface(), models.QualityMeta{MappingQuality: models.MappingExact}, nil
+}
 
-	sv := models.SystemVersion{}
-	var extensions map[string]any
+func (m *SchemaMapper) extractGeneric(data map[string]any, modelType reflect.Type) (reflect.Value, bool) {
+	flat := m.flattenWithAliases(data)
+	value := reflect.New(modelType).Elem()
+	mapped := false
+	extensions := make(map[string]any)
 
-	for key, val := range merged {
+	for key, val := range flat {
 		fm, ok := m.fieldIndex[key]
 		if !ok {
-			if extensions == nil {
-				extensions = make(map[string]any)
-			}
 			extensions[key] = val
 			continue
 		}
-		s := toString(val)
-		if fm.Normalizer != "" {
-			s = NormalizeValue(fm.Normalizer, s)
-		}
-		switch fm.CanonicalField {
-		case "Hostname":
-			if sv.Hostname == "" {
-				sv.Hostname = s
-			}
-		case "SoftwareVersion":
-			if sv.SoftwareVersion == "" {
-				sv.SoftwareVersion = s
-			}
-		case "SystemType":
-			if sv.SystemType == "" {
-				sv.SystemType = s
-			}
-		case "ChassisType":
-			if sv.ChassisType == "" {
-				sv.ChassisType = s
-			}
-		case "Uptime":
-			if sv.Uptime == "" {
-				sv.Uptime = s
-			}
+		if setModelField(value, fm, val) {
+			mapped = true
 		}
 	}
-	sv.VendorExtensions = extensions
-
-	quality := models.QualityMeta{MappingQuality: models.MappingExact}
-	if sv.Hostname == "" && sv.SoftwareVersion == "" {
-		quality.MappingQuality = models.MappingPartial
-		quality.Warnings = []string{"no hostname or version extracted"}
-	} else if sv.Hostname == "" || sv.SoftwareVersion == "" {
-		quality.MappingQuality = models.MappingDerived
+	for _, child := range m.childMappings {
+		if setChildMapping(value, data, child) {
+			mapped = true
+		}
 	}
 
-	return sv, quality, nil
+	if len(extensions) > 0 {
+		if field := value.FieldByName("VendorExtensions"); field.IsValid() && field.CanSet() && field.Kind() == reflect.Map {
+			field.Set(reflect.ValueOf(extensions))
+		}
+	}
+	return value, mapped
+}
+
+func setChildMapping(parent reflect.Value, data map[string]any, child ChildMapping) bool {
+	field := parent.FieldByName(child.CanonicalField)
+	if !field.IsValid() || !field.CanSet() {
+		return false
+	}
+	raw, ok := findNestedValue(data, child.SourceContainer)
+	if !ok || raw == nil {
+		return false
+	}
+	modelType, ok := modelTypeByName(child.ModelType)
+	if !ok {
+		return false
+	}
+	items := rawToMapSlice(raw)
+	if child.List {
+		slice := reflect.MakeSlice(reflect.SliceOf(modelType), 0, len(items))
+		for _, item := range items {
+			v, mapped := mapChildItem(item, modelType, child.Fields)
+			if mapped {
+				slice = reflect.Append(slice, v)
+			}
+		}
+		if slice.Len() == 0 {
+			return false
+		}
+		field.Set(slice)
+		return true
+	}
+	if len(items) == 0 {
+		return false
+	}
+	v, mapped := mapChildItem(items[0], modelType, child.Fields)
+	if !mapped {
+		return false
+	}
+	if field.Kind() == reflect.Pointer {
+		ptr := reflect.New(modelType)
+		ptr.Elem().Set(v)
+		field.Set(ptr)
+		return true
+	}
+	field.Set(v)
+	return true
+}
+
+func mapChildItem(data map[string]any, modelType reflect.Type, fields []FieldMapping) (reflect.Value, bool) {
+	value := reflect.New(modelType).Elem()
+	mapped := false
+	index := map[string]FieldMapping{}
+	for _, f := range fields {
+		index[f.YANGLeaf] = f
+	}
+	flat := flattenKnownContainers(data, map[string]bool{"state": true, "config": true, "counters": true})
+	for key, raw := range flat {
+		fm, ok := index[key]
+		if !ok {
+			continue
+		}
+		if setModelField(value, fm, raw) {
+			mapped = true
+		}
+	}
+	return value, mapped
+}
+
+func setModelField(value reflect.Value, fm FieldMapping, raw any) bool {
+	field := value.FieldByName(fm.CanonicalField)
+	if !field.IsValid() || !field.CanSet() {
+		return false
+	}
+	if isZeroNonEmpty(field) {
+		return false
+	}
+
+	rawString := toString(raw)
+	if fm.Normalizer != "" {
+		rawString = NormalizeValue(fm.Normalizer, rawString)
+		raw = rawString
+	}
+
+	switch field.Kind() {
+	case reflect.String:
+		field.SetString(rawString)
+		return rawString != ""
+	case reflect.Bool:
+		b := toBool(raw)
+		field.SetBool(b)
+		return b
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i := toInt64(raw)
+		field.SetInt(i)
+		return i != 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		u := toUint64(raw)
+		field.SetUint(u)
+		return u != 0
+	case reflect.Float32, reflect.Float64:
+		f := toFloat64(raw)
+		field.SetFloat(f)
+		return f != 0
+	case reflect.Slice:
+		if field.Type().Elem().Kind() == reflect.String {
+			items := toStringSlice(raw)
+			field.Set(reflect.ValueOf(items))
+			return len(items) > 0
+		}
+		// Struct slices are populated by declarative ChildMappings before flat
+		// field assignment reaches this generic scalar conversion path.
+		return false
+	case reflect.Pointer:
+		// Pointer structs are populated by declarative ChildMappings before flat
+		// field assignment reaches this generic scalar conversion path.
+		return false
+	default:
+		return false
+	}
+}
+
+func isZeroNonEmpty(field reflect.Value) bool {
+	switch field.Kind() {
+	case reflect.String:
+		return field.String() != ""
+	case reflect.Bool:
+		return field.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return field.Int() != 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return field.Uint() != 0
+	case reflect.Float32, reflect.Float64:
+		return field.Float() != 0
+	case reflect.Slice, reflect.Map:
+		return field.Len() != 0
+	default:
+		return false
+	}
+}
+
+func hasRequiredFields(value reflect.Value, fields []string) bool {
+	for _, name := range fields {
+		field := value.FieldByName(name)
+		if !field.IsValid() || isReflectZero(field) {
+			return false
+		}
+	}
+	return true
+}
+
+func isReflectZero(v reflect.Value) bool {
+	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
 
 // ---------------------------------------------------------------------------
@@ -293,7 +407,11 @@ func (m *SchemaMapper) unwrapToList(data any) []map[string]any {
 			}
 		}
 		// No namespaced wrapper — look for known list keys.
-		for _, listKey := range []string{"interface", "interfaces", "port"} {
+		for _, listKey := range []string{
+			"interface", "interfaces", "port", "neighbor", "neighbors", "route", "routes",
+			"alarm", "alarms", "component", "components", "entry", "entries", "instance",
+			"policy-definition", "acl-set", "queue", "classifier", "process", "server",
+		} {
 			if arr, ok := v[listKey]; ok {
 				switch inner := arr.(type) {
 				case []any:
@@ -360,6 +478,88 @@ func toMapSlice(items []any) []map[string]any {
 	return result
 }
 
+func rawToMapSlice(raw any) []map[string]any {
+	switch v := raw.(type) {
+	case []any:
+		return toMapSlice(v)
+	case []map[string]any:
+		return v
+	case map[string]any:
+		return []map[string]any{v}
+	default:
+		return nil
+	}
+}
+
+func findNestedValue(data map[string]any, path string) (any, bool) {
+	if path == "" {
+		return nil, false
+	}
+	parts := strings.Split(path, "/")
+	var current any = data
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		next, ok := m[part]
+		if !ok {
+			return nil, false
+		}
+		current = next
+	}
+	return current, true
+}
+
+func flattenKnownContainers(data map[string]any, aliases map[string]bool) map[string]any {
+	flat := make(map[string]any, len(data))
+	for k, v := range data {
+		if aliases[k] {
+			continue
+		}
+		if isScalar(v) {
+			flat[k] = v
+		}
+	}
+	for k, v := range data {
+		if !aliases[k] {
+			continue
+		}
+		if sub, ok := v.(map[string]any); ok {
+			for sk, sv := range sub {
+				if isScalar(sv) {
+					flat[sk] = sv
+				}
+			}
+		}
+	}
+	return flat
+}
+
+func modelTypeByName(name string) (reflect.Type, bool) {
+	switch name {
+	case "InterfaceCounters":
+		return reflect.TypeOf(models.InterfaceCounters{}), true
+	case "LACPMember":
+		return reflect.TypeOf(models.LACPMember{}), true
+	case "ACLEntry":
+		return reflect.TypeOf(models.ACLEntry{}), true
+	case "ACLInterface":
+		return reflect.TypeOf(models.ACLInterface{}), true
+	case "QoSQueue":
+		return reflect.TypeOf(models.QoSQueue{}), true
+	case "QoSScheduler":
+		return reflect.TypeOf(models.QoSScheduler{}), true
+	case "RoutingPolicyStatement":
+		return reflect.TypeOf(models.RoutingPolicyStatement{}), true
+	default:
+		return nil, false
+	}
+}
+
 func isScalar(v any) bool {
 	switch v.(type) {
 	case string, float64, int, int64, uint64, bool, json.Number:
@@ -390,25 +590,126 @@ func toString(v any) string {
 	}
 }
 
-func toInt(v any) int {
+func toInt64(v any) int64 {
 	switch t := v.(type) {
-	case float64:
-		return int(t)
 	case int:
-		return t
+		return int64(t)
 	case int64:
-		return int(t)
+		return t
+	case float64:
+		return int64(t)
 	case json.Number:
-		if i, err := t.Int64(); err == nil {
-			return int(i)
+		i, _ := t.Int64()
+		return i
+	case string:
+		i, _ := strconv.ParseInt(strings.TrimSpace(t), 10, 64)
+		return i
+	default:
+		return 0
+	}
+}
+
+func toUint64(v any) uint64 {
+	switch t := v.(type) {
+	case uint64:
+		return t
+	case int:
+		if t > 0 {
+			return uint64(t)
+		}
+	case int64:
+		if t > 0 {
+			return uint64(t)
+		}
+	case float64:
+		if t > 0 {
+			return uint64(t)
+		}
+	case json.Number:
+		if u, err := strconv.ParseUint(t.String(), 10, 64); err == nil {
+			return u
 		}
 	case string:
-		var i int
-		if _, err := fmt.Sscanf(t, "%d", &i); err == nil {
-			return i
-		}
+		u, _ := strconv.ParseUint(strings.TrimSpace(t), 10, 64)
+		return u
 	}
 	return 0
+}
+
+func toFloat64(v any) float64 {
+	switch t := v.(type) {
+	case float64:
+		return t
+	case int:
+		return float64(t)
+	case int64:
+		return float64(t)
+	case uint64:
+		return float64(t)
+	case json.Number:
+		f, _ := t.Float64()
+		return f
+	case string:
+		cleaned := strings.TrimSuffix(strings.TrimSpace(t), "%")
+		f, _ := strconv.ParseFloat(cleaned, 64)
+		return f
+	default:
+		return 0
+	}
+}
+
+func toBool(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		switch strings.ToLower(strings.TrimSpace(t)) {
+		case "true", "up", "active", "enabled", "enable", "yes", "1":
+			return true
+		default:
+			return false
+		}
+	case float64:
+		return t != 0
+	case int:
+		return t != 0
+	case int64:
+		return t != 0
+	default:
+		return false
+	}
+}
+
+func toStringSlice(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s := toString(item); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	case string:
+		if strings.Contains(t, ",") {
+			parts := strings.Split(t, ",")
+			out := make([]string, 0, len(parts))
+			for _, p := range parts {
+				if s := strings.TrimSpace(p); s != "" {
+					out = append(out, s)
+				}
+			}
+			return out
+		}
+		if strings.TrimSpace(t) == "" {
+			return nil
+		}
+		return []string{strings.TrimSpace(t)}
+	default:
+		return nil
+	}
 }
 
 // ---------------------------------------------------------------------------

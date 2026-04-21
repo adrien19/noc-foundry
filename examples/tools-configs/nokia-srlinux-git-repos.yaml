@@ -22,12 +22,16 @@
 # Operations mappings (nocfoundry-ops.yaml sidecars) are resolved in
 # this order for each version:
 #   1. Explicit `opsFile` in the config (full replace)
-#   2. nocfoundry-ops.yaml found in the cloned repo directory
-#   3. Prebuilt default shipped inside the NOCFoundry binary
+#   2. nocfoundry-ops.yaml found in the cloned repo directory (overlay)
+#   3. Prebuilt default shipped inside the NOCFoundry binary (baseline)
 #   4. Hardcoded fallback for known vendors (nokia)
 #
-# Nokia SR Linux has a prebuilt default, so no opsFile is needed.
-# For other vendors, specify opsFile to map YANG paths to operations.
+# Nokia SR Linux has a prebuilt default operation contract, so no opsFile is
+# needed. A repo nocfoundry-ops.yaml overrides only the operations it declares,
+# while the rest of the catalog stays on the prebuilt baseline. The sidecar
+# contract maps operation IDs to native/OpenConfig YANG paths, data kind,
+# datastore behavior, protocol preference, parameters, and safety limits. For
+# other vendors, specify opsFile to replace the full operation contract.
 #
 # Start the server:
 #
@@ -57,7 +61,10 @@ versions:
     platform: srlinux
     version: v24.10
     path: "."
-    # opsFile: /path/to/custom-ops-v24.yaml  # optional override
+    # Optional full replacement. Use this when a repo/version needs a complete
+    # custom operation contract instead of overlaying the embedded Nokia
+    # SR Linux sidecar.
+    # opsFile: /path/to/custom-ops-v24.yaml
   - ref: v25.10
     vendor: nokia
     platform: srlinux
@@ -115,9 +122,9 @@ devices:
 
 
 # --- Schema-aware tools (gNMI / NETCONF) ---
-# These tools use the YANG bundles cloned from the Git repo above.
-# The schema-derived profile resolves native_paths automatically
-# from the prebuilt sidecar operations (get_interfaces, get_system_version).
+# These tools use the YANG bundles cloned from the Git repo above. Tools only
+# reference sources; they do not embed YANG paths. The schema-derived profile
+# resolves native_paths/oc_paths automatically from nocfoundry-ops.yaml.
 
 ---
 # Show interfaces on srl1 via gNMI using schema-derived paths.
@@ -148,6 +155,20 @@ type: network-show-version
 source: nokia-git-lab/srl1/gnmi
 
 ---
+# Show BGP neighbors through the schema-derived get_bgp_neighbors operation.
+kind: tools
+name: show_srl1_bgp_neighbors_gnmi
+type: network-show-bgp-neighbors
+source: nokia-git-lab/srl1/gnmi
+
+---
+# Show active alarms through the schema-derived get_system_alarms operation.
+kind: tools
+name: show_srl1_alarms_gnmi
+type: network-show-alarms
+source: nokia-git-lab/srl1/gnmi
+
+---
 # SSH command tool (uses hardcoded profile, not YANG schemas).
 kind: tools
 name: show_srl1_command
@@ -162,4 +183,6 @@ tools:
   - show_srl2_interfaces_gnmi
   - show_srl1_interfaces_netconf
   - show_srl1_version_gnmi
+  - show_srl1_bgp_neighbors_gnmi
+  - show_srl1_alarms_gnmi
   - show_srl1_command

@@ -1,0 +1,106 @@
+# Nokia SR Linux operation coverage demo.
+#
+# This demo exposes schema/profile readiness using network-show-coverage.
+# Coverage can be viewed for all registered profiles, one source, or all
+# devices matched by a sourceSelector. When a local or repo
+# nocfoundry-ops.yaml is present, it overlays the embedded SR Linux sidecar
+# by operation ID rather than replacing the whole catalog.
+#
+# Start with Git-loaded schemas:
+#
+#   ./nocfoundry \
+#     --tools-file examples/tools-configs/coverage/nokia-srlinux-coverage-demo.yaml \
+#     --ui
+
+---
+kind: schemaRepos
+name: nokia-srlinux-yang
+url: https://github.com/nokia/srlinux-yang-models
+auth:
+  type: none
+versions:
+  - ref: v24.10
+    vendor: nokia
+    platform: srlinux
+    version: v24.10
+    path: "."
+    # Optional full sidecar override for local testing:
+    # opsFile: /path/to/custom/nocfoundry-ops.yaml
+
+---
+kind: deviceGroups
+name: coverage-lab
+type: static
+sourceTemplates:
+  gnmi:
+    type: gnmi
+    port: ${GNMI_PORT:57400}
+    tls_insecure: true
+    username: ${GNMI_USER:admin}
+    password: ${GNMI_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    version: v24.10
+    native_yang: true
+    openconfig: false
+  netconf:
+    type: netconf
+    port: ${NETCONF_PORT:830}
+    username: ${SSH_USER:admin}
+    password: ${SSH_PASS:NokiaSrl1!}
+    vendor: nokia
+    platform: srlinux
+    version: v24.10
+    native_yang: true
+    openconfig: false
+    timeout: 30s
+devices:
+  - name: spine-1
+    host: ${SPINE1_HOST:172.31.250.12}
+    labels:
+      vendor: nokia
+      site: coverage-demo
+      role: spine
+  - name: leaf-1
+    host: ${LEAF1_HOST:172.31.250.11}
+    labels:
+      vendor: nokia
+      site: coverage-demo
+      role: leaf
+
+---
+kind: tools
+name: show_registered_profile_coverage
+type: network-show-coverage
+description: >-
+  Show readiness for registered profiles. Use vendor/platform filters to
+  narrow the report without requiring a live source.
+
+---
+kind: tools
+name: show_spine1_gnmi_coverage
+type: network-show-coverage
+description: >-
+  Show operation readiness for spine-1 using version-aware profile lookup.
+source: coverage-lab/spine-1/gnmi
+
+---
+kind: tools
+name: show_coverage_demo_devices
+type: network-show-coverage
+description: >-
+  Show operation readiness for every demo device matched by labels.
+sourceSelector:
+  matchLabels:
+    site: coverage-demo
+  template: gnmi
+  maxConcurrency: 5
+
+---
+kind: toolsets
+name: coverage-demo-tools
+description: Coverage and readiness visibility for schema-driven operations.
+tools:
+  - show_registered_profile_coverage
+  - show_spine1_gnmi_coverage
+  - show_coverage_demo_devices
