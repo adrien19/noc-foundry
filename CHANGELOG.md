@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/adrien19/noc-foundry/compare/v0.4.0...v0.4.1) (2026-04-21)
+
+
+### Bug Fixes
+
+* **release:** checkout before dispatching artifacts ([f650188](https://github.com/adrien19/noc-foundry/commit/f650188f9851f275a48d27b4427d6e5db9b353a3))
+* **release:** checkout before dispatching artifacts ([ae846d8](https://github.com/adrien19/noc-foundry/commit/ae846d89aff358e775abbf8f5ecec7ec9e4a3c0c))
+
 ## [0.4.0](https://github.com/adrien19/noc-foundry/compare/v0.3.0...v0.4.0) (2026-04-21)
 
 
