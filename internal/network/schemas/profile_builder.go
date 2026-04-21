@@ -137,15 +137,6 @@ func BuildProfile(bundle *SchemaBundle, mappings []OperationMapping) (*profiles.
 	return profile, warnings
 }
 
-func hasRequiredParameters(params []OperationParameter) bool {
-	for _, p := range params {
-		if p.Required {
-			return true
-		}
-	}
-	return false
-}
-
 func orderedProtocolPaths(m OperationMapping, byProtocol map[profiles.Protocol]profiles.ProtocolPath) []profiles.ProtocolPath {
 	order := defaultProtocolPreference()
 	if len(m.Preferred) > 0 {
