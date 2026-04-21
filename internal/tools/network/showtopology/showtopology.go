@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/adrien19/noc-foundry/internal/embeddingmodels"
@@ -125,17 +126,7 @@ func buildTopologyResult(result fanout.Result, labels map[string]map[string]stri
 			continue
 		}
 		for _, neighbor := range lldpNeighbors(record.Payload) {
-			link := models.TopologyLink{
-				LocalDevice:     deviceResult.Device,
-				LocalInterface:  neighbor.LocalInterface,
-				RemoteDevice:    neighbor.RemoteSystemName,
-				RemoteInterface: neighbor.RemotePortID,
-				Confidence:      "low",
-				Evidence:        []string{"lldp_single_sided"},
-			}
-			if _, ok := nodes[link.RemoteDevice]; !ok {
-				link.Evidence = append(link.Evidence, "unmatched_inventory_node")
-			}
+			link := newTopologyLink(deviceResult.Device, neighbor, nodes)
 			links = append(links, link)
 		}
 	}
@@ -144,7 +135,44 @@ func buildTopologyResult(result fanout.Result, labels map[string]map[string]stri
 	for _, node := range nodes {
 		topologyNodes = append(topologyNodes, node)
 	}
+	sort.Slice(topologyNodes, func(i, j int) bool {
+		return topologyNodes[i].Device < topologyNodes[j].Device
+	})
+	sort.Slice(links, func(i, j int) bool {
+		a, b := links[i], links[j]
+		if a.LocalDevice != b.LocalDevice {
+			return a.LocalDevice < b.LocalDevice
+		}
+		if a.LocalInterface != b.LocalInterface {
+			return a.LocalInterface < b.LocalInterface
+		}
+		if a.RemoteDevice != b.RemoteDevice {
+			return a.RemoteDevice < b.RemoteDevice
+		}
+		return a.RemoteInterface < b.RemoteInterface
+	})
 	return Result{Topology: models.TopologyMap{Nodes: topologyNodes, Links: links}, Errors: errors}
+}
+
+func newTopologyLink(localDevice string, neighbor models.LLDPNeighbor, nodes map[string]models.TopologyNode) models.TopologyLink {
+	link := models.TopologyLink{
+		LocalDevice:     localDevice,
+		LocalInterface:  neighbor.LocalInterface,
+		RemoteDevice:    neighbor.RemoteSystemName,
+		RemoteInterface: neighbor.RemotePortID,
+		Confidence:      "low",
+		Evidence:        []string{"lldp_single_sided"},
+	}
+	if link.RemoteInterface == "" {
+		link.Evidence = appendEvidence(link.Evidence, "remote_interface_missing")
+	}
+	if _, ok := nodes[link.RemoteDevice]; ok && link.RemoteDevice != "" {
+		link.Confidence = "medium"
+		link.Evidence = appendEvidence(link.Evidence, "inventory_node_matched")
+	} else {
+		link.Evidence = appendEvidence(link.Evidence, "unmatched_inventory_node")
+	}
+	return link
 }
 
 func lldpNeighbors(payload any) []models.LLDPNeighbor {
@@ -160,13 +188,42 @@ func markBidirectional(links []models.TopologyLink) {
 			if i == j {
 				continue
 			}
-			if links[i].LocalDevice == links[j].RemoteDevice && links[i].RemoteDevice == links[j].LocalDevice {
-				links[i].Confidence = "high"
-				links[i].Evidence = []string{"lldp_bidirectional"}
-				break
+			if !isBidirectionalPair(links[i], links[j]) {
+				continue
 			}
+			links[i].Confidence = "high"
+			links[i].Evidence = appendEvidence(links[i].Evidence, "lldp_bidirectional")
+			break
 		}
 	}
+}
+
+func isBidirectionalPair(a, b models.TopologyLink) bool {
+	if a.LocalDevice == "" || a.RemoteDevice == "" || b.LocalDevice == "" || b.RemoteDevice == "" {
+		return false
+	}
+	if a.LocalDevice != b.RemoteDevice || a.RemoteDevice != b.LocalDevice {
+		return false
+	}
+	// TODO(topology-confidence): Reconcile LLDP remote-system-name matching
+	// with remote chassis/source IDs when hostname-based identity is not stable
+	// enough to prove that two records describe the same managed node.
+	if a.RemoteInterface != "" && b.LocalInterface != "" && a.RemoteInterface != b.LocalInterface {
+		return false
+	}
+	if b.RemoteInterface != "" && a.LocalInterface != "" && b.RemoteInterface != a.LocalInterface {
+		return false
+	}
+	return true
+}
+
+func appendEvidence(existing []string, value string) []string {
+	for _, item := range existing {
+		if item == value {
+			return existing
+		}
+	}
+	return append(existing, value)
 }
 
 func selectorLabels(selector *profilequery.SourceSelector) map[string]string {

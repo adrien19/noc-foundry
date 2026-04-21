@@ -2,7 +2,9 @@
 #
 # This demo exposes schema/profile readiness using network-show-coverage.
 # Coverage can be viewed for all registered profiles, one source, or all
-# devices matched by a sourceSelector.
+# devices matched by a sourceSelector. When a local or repo
+# nocfoundry-ops.yaml is present, it overlays the embedded SR Linux sidecar
+# by operation ID rather than replacing the whole catalog.
 #
 # Start with Git-loaded schemas:
 #

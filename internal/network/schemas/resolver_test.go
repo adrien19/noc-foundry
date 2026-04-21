@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/openconfig/goyang/pkg/yang"
 )
 
 func loadTestBundle(t *testing.T) *SchemaBundle {
@@ -196,5 +198,22 @@ func TestBuildGnmiPath(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("buildGnmiPath(%q, %q) = %q; want %q", tt.yangPath, tt.moduleName, got, tt.want)
 		}
+	}
+}
+
+func TestBuildGnmiPathFromEntries_MixedNamespaceAugment(t *testing.T) {
+	baseModule := &yang.Module{Name: "srl_nokia-network-instance"}
+	augModule := &yang.Module{Name: "srl_nokia-ip-route-tables"}
+	entries := []*yang.Entry{
+		{Name: "network-instance", Node: baseModule},
+		{Name: "route-table", Node: baseModule},
+		{Name: "ipv4-unicast", Node: augModule},
+		{Name: "route", Node: augModule},
+	}
+
+	got := buildGnmiPathFromEntries(entries, "/srl_nokia-network-instance:network-instance/route-table/srl_nokia-ip-route-tables:ipv4-unicast/route", "")
+	want := "/srl_nokia-network-instance:network-instance/srl_nokia-network-instance:route-table/srl_nokia-ip-route-tables:ipv4-unicast/srl_nokia-ip-route-tables:route"
+	if got != want {
+		t.Fatalf("buildGnmiPathFromEntries() = %q; want %q", got, want)
 	}
 }

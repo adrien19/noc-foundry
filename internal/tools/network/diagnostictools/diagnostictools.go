@@ -160,6 +160,9 @@ func (t Tool) renderCommand(identity capabilities.SourceIdentity, params paramet
 	if !ok || template.Command == "" {
 		return "", fmt.Errorf("no diagnostic command template for %s on %s/%s", t.spec.operationID, profile.Vendor, profile.Platform)
 	}
+	if template.Transport != profiles.DiagnosticTransportCLI {
+		return "", fmt.Errorf("diagnostic transport %q for %s on %s/%s is not supported; only cli is implemented", template.Transport, t.spec.operationID, profile.Vendor, profile.Platform)
+	}
 	command := renderDiagTemplate(template.Command, values)
 	for _, fragment := range template.Optional {
 		if values[fragment.Parameter] != "" {

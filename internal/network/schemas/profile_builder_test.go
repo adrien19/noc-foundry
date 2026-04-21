@@ -127,6 +127,7 @@ func TestMergeProfiles(t *testing.T) {
 		DiagnosticCommands: map[string]profiles.DiagnosticCommandTemplate{
 			profiles.OpGetConfigurationDiff: {
 				OperationID: profiles.OpGetConfigurationDiff,
+				Transport:   profiles.DiagnosticTransportCLI,
 				Command:     "diff {source} {target}",
 			},
 		},
@@ -186,6 +187,9 @@ func TestMergeProfiles(t *testing.T) {
 	}
 	if _, ok := merged.DiagnosticCommands[profiles.OpGetConfigurationDiff]; !ok {
 		t.Fatal("merged profile missing diagnostic command templates from fallback")
+	}
+	if got := merged.DiagnosticCommands[profiles.OpGetConfigurationDiff].Transport; got != profiles.DiagnosticTransportCLI {
+		t.Fatalf("diagnostic transport = %q; want cli", got)
 	}
 }
 

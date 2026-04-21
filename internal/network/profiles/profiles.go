@@ -158,10 +158,18 @@ type OperationLimits struct {
 	MaxBytes     int
 }
 
+// DiagnosticTransport describes how a diagnostic operation is executed.
+type DiagnosticTransport string
+
+const (
+	DiagnosticTransportCLI DiagnosticTransport = "cli"
+)
+
 // DiagnosticCommandTemplate describes a vendor/platform-owned read-only
 // command template for CLI/RPC diagnostic operations.
 type DiagnosticCommandTemplate struct {
 	OperationID string
+	Transport   DiagnosticTransport
 	Command     string
 	Optional    []DiagnosticCommandFragment
 }

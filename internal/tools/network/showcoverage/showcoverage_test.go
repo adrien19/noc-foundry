@@ -6,6 +6,7 @@ import (
 
 	"github.com/adrien19/noc-foundry/internal/network/capabilities"
 	"github.com/adrien19/noc-foundry/internal/network/profiles"
+	"github.com/adrien19/noc-foundry/internal/network/schemas"
 	"github.com/adrien19/noc-foundry/internal/sources"
 	"github.com/adrien19/noc-foundry/internal/util/parameters"
 )
@@ -59,6 +60,13 @@ func TestInvoke_DeviceAwareSourceCoverage(t *testing.T) {
 	profiles.RegisterOrReplace(&profiles.Profile{
 		Vendor:   "coverage-tool",
 		Platform: "router",
+		DiagnosticCommands: map[string]profiles.DiagnosticCommandTemplate{
+			profiles.OpRunPing: {
+				OperationID: profiles.OpRunPing,
+				Transport:   profiles.DiagnosticTransportCLI,
+				Command:     "ping {target} -c {count}",
+			},
+		},
 		Operations: map[string]profiles.OperationDescriptor{
 			profiles.OpGetInterfaces: {
 				OperationID: profiles.OpGetInterfaces,
@@ -86,5 +94,15 @@ func TestInvoke_DeviceAwareSourceCoverage(t *testing.T) {
 	devices := got["devices"].([]DeviceCoverage)
 	if devices[0].Device != "spine-1" {
 		t.Fatalf("device = %q, want spine-1", devices[0].Device)
+	}
+	var ping schemas.OperationCoverage
+	for _, op := range devices[0].Report.Operations {
+		if op.OperationID == profiles.OpRunPing {
+			ping = op
+			break
+		}
+	}
+	if ping.DiagnosticTransport != "cli" || ping.DiagnosticReady != "ops-ready" {
+		t.Fatalf("ping coverage = %+v; want cli ops-ready", ping)
 	}
 }

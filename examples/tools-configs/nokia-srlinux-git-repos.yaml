@@ -22,15 +22,16 @@
 # Operations mappings (nocfoundry-ops.yaml sidecars) are resolved in
 # this order for each version:
 #   1. Explicit `opsFile` in the config (full replace)
-#   2. nocfoundry-ops.yaml found in the cloned repo directory
-#   3. Prebuilt default shipped inside the NOCFoundry binary
+#   2. nocfoundry-ops.yaml found in the cloned repo directory (overlay)
+#   3. Prebuilt default shipped inside the NOCFoundry binary (baseline)
 #   4. Hardcoded fallback for known vendors (nokia)
 #
 # Nokia SR Linux has a prebuilt default operation contract, so no opsFile is
-# needed. The sidecar contract maps operation IDs to native/OpenConfig YANG
-# paths, data kind, datastore behavior, protocol preference, parameters, and
-# safety limits. For other vendors, specify opsFile to map YANG paths to
-# operations.
+# needed. A repo nocfoundry-ops.yaml overrides only the operations it declares,
+# while the rest of the catalog stays on the prebuilt baseline. The sidecar
+# contract maps operation IDs to native/OpenConfig YANG paths, data kind,
+# datastore behavior, protocol preference, parameters, and safety limits. For
+# other vendors, specify opsFile to replace the full operation contract.
 #
 # Start the server:
 #
@@ -60,9 +61,9 @@ versions:
     platform: srlinux
     version: v24.10
     path: "."
-    # Optional full override. Use this when a repo/version needs custom native
-    # paths or stricter operation limits than the embedded Nokia SR Linux
-    # sidecar.
+    # Optional full replacement. Use this when a repo/version needs a complete
+    # custom operation contract instead of overlaying the embedded Nokia
+    # SR Linux sidecar.
     # opsFile: /path/to/custom-ops-v24.yaml
   - ref: v25.10
     vendor: nokia

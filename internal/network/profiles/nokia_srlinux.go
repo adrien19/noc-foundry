@@ -24,6 +24,7 @@ func init() {
 		DiagnosticCommands: map[string]DiagnosticCommandTemplate{
 			OpRunPing: {
 				OperationID: OpRunPing,
+				Transport:   DiagnosticTransportCLI,
 				Command:     "ping {target} -c {count}",
 				Optional: []DiagnosticCommandFragment{
 					{Parameter: "vrf", Template: " network-instance {vrf}"},
@@ -32,6 +33,7 @@ func init() {
 			},
 			OpRunTraceroute: {
 				OperationID: OpRunTraceroute,
+				Transport:   DiagnosticTransportCLI,
 				Command:     "traceroute {target} -m {max_hops}",
 				Optional: []DiagnosticCommandFragment{
 					{Parameter: "vrf", Template: " network-instance {vrf}"},
@@ -40,6 +42,7 @@ func init() {
 			},
 			OpGetConfigurationDiff: {
 				OperationID: OpGetConfigurationDiff,
+				Transport:   DiagnosticTransportCLI,
 				Command:     "diff {source} {target}",
 			},
 		},

@@ -15,6 +15,7 @@
 package schemas
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/adrien19/noc-foundry/internal/network/parsers"
@@ -31,6 +32,10 @@ type OperationCoverage struct {
 	CanonicalModelPresent bool     `json:"canonical_model_present"`
 	CLIParsers            []string `json:"cli_parsers,omitempty"`
 	DedicatedToolPresent  bool     `json:"dedicated_tool_present"`
+	DiagnosticTransport   string   `json:"diagnostic_transport,omitempty"`
+	DiagnosticTemplate    bool     `json:"diagnostic_template_present,omitempty"`
+	DiagnosticTypedResult bool     `json:"diagnostic_typed_result_present,omitempty"`
+	DiagnosticReady       string   `json:"diagnostic_ready,omitempty"`
 	Readiness             string   `json:"readiness"`
 	SidecarOrigin         string   `json:"sidecar_origin,omitempty"`
 }
@@ -60,6 +65,21 @@ var dedicatedToolOperations = map[string]bool{
 	"get_routing_policy":      true,
 	"get_log_entries":         true,
 	"get_config_section":      true,
+	"run_ping":                true,
+	"run_traceroute":          true,
+	"get_configuration_diff":  true,
+}
+
+var diagnosticOperations = []string{
+	profiles.OpRunPing,
+	profiles.OpRunTraceroute,
+	profiles.OpGetConfigurationDiff,
+}
+
+var diagnosticTypedResults = map[string]bool{
+	profiles.OpRunPing:              true,
+	profiles.OpRunTraceroute:        true,
+	profiles.OpGetConfigurationDiff: true,
 }
 
 // BuildCoverageReport creates a testable operation coverage view.
@@ -73,7 +93,21 @@ func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageR
 	report.Version = profile.Version
 
 	warningsByOp := warningsByOperation(warnings)
-	for opID, op := range profile.Operations {
+	opIDs := make(map[string]struct{}, len(profile.Operations)+len(diagnosticOperations))
+	for opID := range profile.Operations {
+		opIDs[opID] = struct{}{}
+	}
+	for _, opID := range diagnosticOperations {
+		opIDs[opID] = struct{}{}
+	}
+	sortedOpIDs := make([]string, 0, len(opIDs))
+	for opID := range opIDs {
+		sortedOpIDs = append(sortedOpIDs, opID)
+	}
+	sort.Strings(sortedOpIDs)
+
+	for _, opID := range sortedOpIDs {
+		op := profile.Operations[opID]
 		coverage := OperationCoverage{
 			OperationID:           opID,
 			Warnings:              warningsByOp[opID],
@@ -95,6 +129,14 @@ func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageR
 				coverage.CLIParsers = append(coverage.CLIParsers, format)
 			}
 		}
+		if template, ok := profile.DiagnosticCommands[opID]; ok {
+			coverage.DiagnosticTransport = string(template.Transport)
+			coverage.DiagnosticTemplate = template.Command != ""
+		}
+		if diagnosticTypedResults[opID] {
+			coverage.DiagnosticTypedResult = true
+		}
+		coverage.DiagnosticReady = diagnosticReadinessForCoverage(coverage)
 		coverage.Readiness = readinessForCoverage(coverage)
 		report.Operations = append(report.Operations, coverage)
 	}
@@ -102,6 +144,9 @@ func BuildCoverageReport(profile *profiles.Profile, warnings []string) CoverageR
 }
 
 func readinessForCoverage(c OperationCoverage) string {
+	if c.DiagnosticReady != "" {
+		return c.DiagnosticReady
+	}
 	if len(c.Protocols) == 0 {
 		return "registered"
 	}
@@ -118,6 +163,34 @@ func readinessForCoverage(c OperationCoverage) string {
 		return "tool-ready"
 	}
 	return "canonical-ready"
+}
+
+func diagnosticReadinessForCoverage(c OperationCoverage) string {
+	if !isDiagnosticOperation(c.OperationID) {
+		return ""
+	}
+	if !c.DiagnosticTemplate {
+		return "registered"
+	}
+	if c.DiagnosticTransport != string(profiles.DiagnosticTransportCLI) {
+		return "registered"
+	}
+	if c.DedicatedToolPresent {
+		if c.DiagnosticTypedResult {
+			return "ops-ready"
+		}
+		return "tool-ready"
+	}
+	return "cli-ready"
+}
+
+func isDiagnosticOperation(operationID string) bool {
+	for _, opID := range diagnosticOperations {
+		if opID == operationID {
+			return true
+		}
+	}
+	return false
 }
 
 func warningsByOperation(warnings []string) map[string][]string {

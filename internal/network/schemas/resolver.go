@@ -60,7 +60,7 @@ func (b *SchemaBundle) ResolvePath(yangPath string) (*ResolvedPaths, error) {
 		}
 	}
 
-	gnmiPath := buildGnmiPath(yangPath, moduleName)
+	gnmiPath := buildGnmiPathFromEntries(entries, yangPath, moduleName)
 	netconfFilter := buildNestedNetconfFilter(entries)
 
 	return &ResolvedPaths{
@@ -250,6 +250,34 @@ func buildGnmiPath(yangPath, moduleName string) string {
 	}
 
 	return "/" + strings.Join(result, "/")
+}
+
+// buildGnmiPathFromEntries constructs a gNMI path using the resolved schema
+// entry chain so augmented descendants keep their own module prefixes.
+func buildGnmiPathFromEntries(entries []*yang.Entry, yangPath, fallbackModule string) string {
+	if len(entries) == 0 {
+		return buildGnmiPath(yangPath, fallbackModule)
+	}
+
+	segments := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		moduleName := fallbackModule
+		if mod := entryModule(entry); mod != nil && mod.Name != "" {
+			moduleName = mod.Name
+		}
+		if moduleName != "" {
+			segments = append(segments, moduleName+":"+entry.Name)
+			continue
+		}
+		segments = append(segments, entry.Name)
+	}
+	if len(segments) == 0 {
+		return buildGnmiPath(yangPath, fallbackModule)
+	}
+	return "/" + strings.Join(segments, "/")
 }
 
 // buildNestedNetconfFilter builds a NETCONF subtree filter XML element

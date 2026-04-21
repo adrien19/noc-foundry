@@ -125,10 +125,13 @@ func TestBuildCoverageReport(t *testing.T) {
 			},
 		},
 	}, nil)
-	if len(report.Operations) != 1 {
-		t.Fatalf("coverage operations = %d; want 1", len(report.Operations))
+	var got OperationCoverage
+	for _, op := range report.Operations {
+		if op.OperationID == "get_interfaces" {
+			got = op
+			break
+		}
 	}
-	got := report.Operations[0]
 	if !got.CanonicalMapPresent || !got.CanonicalModelPresent || !got.DedicatedToolPresent {
 		t.Fatalf("coverage = %+v; want canonical map/model and dedicated tool", got)
 	}

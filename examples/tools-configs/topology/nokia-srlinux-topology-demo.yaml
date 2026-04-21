@@ -14,6 +14,10 @@
 # Expected YANG directory layout:
 #
 #   yang-models/nokia/srlinux/v24.10 -> <SR Linux YANG model tree>
+#
+# If yang-models/nokia/srlinux/v24.10/nocfoundry-ops.yaml is present, it
+# overlays the embedded SR Linux operations reference by operation ID instead
+# of replacing the rest of the prebuilt catalog.
 
 ---
 kind: deviceGroups

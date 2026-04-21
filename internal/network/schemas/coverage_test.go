@@ -25,10 +25,7 @@ func TestBuildCoverageReport_OriginAndReadiness(t *testing.T) {
 		},
 	}, nil)
 
-	if len(report.Operations) != 1 {
-		t.Fatalf("operations = %d, want 1", len(report.Operations))
-	}
-	op := report.Operations[0]
+	op := findCoverageOp(t, report, profiles.OpGetInterfaces)
 	if op.SidecarOrigin != "prebuilt" {
 		t.Fatalf("SidecarOrigin = %q, want prebuilt", op.SidecarOrigin)
 	}
@@ -49,10 +46,7 @@ func TestBuildCoverageReport_FallbackOrigin(t *testing.T) {
 		},
 	}, []string{"operation custom_unmapped: no canonical map"})
 
-	if len(report.Operations) != 1 {
-		t.Fatalf("operations = %d, want 1", len(report.Operations))
-	}
-	op := report.Operations[0]
+	op := findCoverageOp(t, report, "custom_unmapped")
 	if op.SidecarOrigin != "fallback" {
 		t.Fatalf("SidecarOrigin = %q, want fallback", op.SidecarOrigin)
 	}
@@ -62,4 +56,48 @@ func TestBuildCoverageReport_FallbackOrigin(t *testing.T) {
 	if len(op.Warnings) == 0 {
 		t.Fatal("expected warning to be attached to operation")
 	}
+}
+
+func TestBuildCoverageReport_Diagnostics(t *testing.T) {
+	report := BuildCoverageReport(&profiles.Profile{
+		Vendor:   "nokia",
+		Platform: "srlinux",
+		DiagnosticCommands: map[string]profiles.DiagnosticCommandTemplate{
+			profiles.OpRunPing: {
+				OperationID: profiles.OpRunPing,
+				Transport:   profiles.DiagnosticTransportCLI,
+				Command:     "ping {target} -c {count}",
+			},
+		},
+	}, nil)
+
+	ping := findCoverageOp(t, report, profiles.OpRunPing)
+	if ping.DiagnosticTransport != "cli" {
+		t.Fatalf("DiagnosticTransport = %q, want cli", ping.DiagnosticTransport)
+	}
+	if !ping.DiagnosticTemplate {
+		t.Fatal("expected diagnostic template to be present")
+	}
+	if !ping.DiagnosticTypedResult {
+		t.Fatal("expected diagnostic typed result to be present")
+	}
+	if ping.DiagnosticReady != "ops-ready" || ping.Readiness != "ops-ready" {
+		t.Fatalf("diagnostic readiness = %q / %q, want ops-ready", ping.DiagnosticReady, ping.Readiness)
+	}
+
+	traceroute := findCoverageOp(t, report, profiles.OpRunTraceroute)
+	if traceroute.DiagnosticReady != "registered" {
+		t.Fatalf("missing diagnostic template readiness = %q, want registered", traceroute.DiagnosticReady)
+	}
+}
+
+func findCoverageOp(t *testing.T, report CoverageReport, opID string) OperationCoverage {
+	t.Helper()
+	for _, op := range report.Operations {
+		if op.OperationID == opID {
+			return op
+		}
+	}
+	t.Fatalf("operation %q not found in coverage report", opID)
+	return OperationCoverage{}
 }
