@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.2](https://github.com/adrien19/noc-foundry/compare/v0.4.1...v0.4.2) (2026-04-21)
+
+
+### Bug Fixes
+
+* **release:** publish artifacts from tag workflow ([a37dfca](https://github.com/adrien19/noc-foundry/commit/a37dfca0c0e344faf68f146e7c5538bb47803127))
+* **release:** publish artifacts from tag workflow ([3e09f41](https://github.com/adrien19/noc-foundry/commit/3e09f419cd26dcac8e8a04459c5a8a19bac8cda2))
+
 ## [0.4.1](https://github.com/adrien19/noc-foundry/compare/v0.4.0...v0.4.1) (2026-04-21)
 
 
