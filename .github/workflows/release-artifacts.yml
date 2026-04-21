@@ -1,9 +1,9 @@
 name: release-artifacts
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       tag:
@@ -23,28 +23,55 @@ jobs:
     outputs:
       tag: ${{ steps.vars.outputs.tag }}
       version: ${{ steps.vars.outputs.version }}
+      commit: ${{ steps.vars.outputs.commit }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
       - name: Determine release version
         id: vars
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
           fi
 
-          if [[ -z "${TAG}" || "${TAG}" != v* ]]; then
+          if [[ -z "${TAG}" || ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
             echo "Release tag must be in the form vX.Y.Z" >&2
             exit 1
           fi
 
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          COMMIT="$(git rev-list -n 1 "${TAG}")"
+          echo "commit=${COMMIT}" >> "$GITHUB_OUTPUT"
+
+  ensure-release:
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Ensure GitHub release exists
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
+          generate_release_notes: true
+          prerelease: ${{ contains(needs.prepare.outputs.tag, 'rc') || contains(needs.prepare.outputs.tag, 'beta') || contains(needs.prepare.outputs.tag, 'alpha') }}
 
   build-binaries:
     runs-on: ubuntu-latest
-    needs: prepare
+    needs:
+      - prepare
+      - ensure-release
     strategy:
       fail-fast: false
       matrix:
@@ -54,6 +81,10 @@ jobs:
             archive: tar.gz
           - goos: linux
             goarch: arm64
+            archive: tar.gz
+          - goos: linux
+            goarch: arm
+            goarm: "7"
             archive: tar.gz
           - goos: darwin
             goarch: amd64
@@ -79,13 +110,20 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
           TAG: ${{ needs.prepare.outputs.tag }}
+          COMMIT_SHA: ${{ needs.prepare.outputs.commit }}
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
           ARCHIVE: ${{ matrix.archive }}
         run: |
           set -euo pipefail
 
-          OUT_DIR="$RUNNER_TEMP/build/${GOOS}_${GOARCH}"
+          TARGET="${GOOS}_${GOARCH}"
+          if [[ -n "${GOARM}" ]]; then
+            TARGET="${TARGET}v${GOARM}"
+          fi
+
+          OUT_DIR="$RUNNER_TEMP/build/${TARGET}"
           mkdir -p "${OUT_DIR}"
 
           BIN_NAME="nocfoundry"
@@ -93,80 +131,53 @@ jobs:
             BIN_NAME="nocfoundry.exe"
           fi
 
-          CGO_ENABLED=0 GOOS="${GOOS}" GOARCH="${GOARCH}" \
+          CGO_ENABLED=0 GOOS="${GOOS}" GOARCH="${GOARCH}" GOARM="${GOARM}" \
             go build \
               -trimpath \
-              -ldflags="-s -w -X github.com/adrien19/noc-foundry/cmd.buildType=binary -X github.com/adrien19/noc-foundry/cmd.commitSha=${GITHUB_SHA}" \
+              -ldflags="-s -w -X github.com/adrien19/noc-foundry/cmd.versionNum=${VERSION} -X github.com/adrien19/noc-foundry/cmd.buildType=binary -X github.com/adrien19/noc-foundry/cmd.commitSha=${COMMIT_SHA}" \
               -o "${OUT_DIR}/${BIN_NAME}" \
               .
 
           cp LICENSE README.md "${OUT_DIR}/"
 
           if [[ "${ARCHIVE}" == "zip" ]]; then
-            ARCHIVE_NAME="nocfoundry_${VERSION}_${GOOS}_${GOARCH}.zip"
+            ARCHIVE_NAME="nocfoundry_${VERSION}_${TARGET}.zip"
             (
               cd "${OUT_DIR}"
               zip -q -r "$RUNNER_TEMP/${ARCHIVE_NAME}" .
             )
           else
-            ARCHIVE_NAME="nocfoundry_${VERSION}_${GOOS}_${GOARCH}.tar.gz"
+            ARCHIVE_NAME="nocfoundry_${VERSION}_${TARGET}.tar.gz"
             tar -C "${OUT_DIR}" -czf "$RUNNER_TEMP/${ARCHIVE_NAME}" .
           fi
 
+          (
+            cd "$RUNNER_TEMP"
+            sha256sum "${ARCHIVE_NAME}" > "${ARCHIVE_NAME}.sha256"
+          )
           echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> "$GITHUB_ENV"
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: ${{ env.ARCHIVE_NAME }}
-          path: ${{ runner.temp }}/${{ env.ARCHIVE_NAME }}
-          if-no-files-found: error
-
-  publish-release-assets:
-    runs-on: ubuntu-latest
-    needs:
-      - prepare
-      - build-binaries
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Download binary artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          path: ${{ runner.temp }}/release-assets
-          merge-multiple: true
-
-      - name: Generate checksums
-        working-directory: ${{ runner.temp }}/release-assets
-        run: |
-          set -euo pipefail
-          sha256sum *.tar.gz *.zip > checksums.txt
-
-      - name: Ensure GitHub release exists
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.prepare.outputs.tag }}
-        run: |
-          gh release view "${TAG}" >/dev/null 2>&1 || \
-            gh release create "${TAG}" --title "${TAG}" --notes "Release artifacts for ${TAG}"
-
       - name: Upload release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.prepare.outputs.tag }}
-        working-directory: ${{ runner.temp }}/release-assets
-        run: |
-          gh release upload "${TAG}" ./* --clobber
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          fail_on_unmatched_files: true
+          files: |
+            ${{ runner.temp }}/${{ env.ARCHIVE_NAME }}
+            ${{ runner.temp }}/${{ env.ARCHIVE_NAME }}.sha256
 
       - name: Attest binary provenance
         uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2
         with:
-          subject-path: ${{ runner.temp }}/release-assets/*
+          subject-path: |
+            ${{ runner.temp }}/${{ env.ARCHIVE_NAME }}
+            ${{ runner.temp }}/${{ env.ARCHIVE_NAME }}.sha256
 
   publish-release-image:
     runs-on: ubuntu-latest
-    needs: prepare
+    needs:
+      - prepare
+      - build-binaries
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -190,6 +201,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.prepare.outputs.tag }}
+            type=raw,value=${{ needs.prepare.outputs.version }}
             type=raw,value=latest
 
       - name: Build and push release image
@@ -204,7 +216,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             BUILD_TYPE=container
-            COMMIT_SHA=${{ github.sha }}
+            COMMIT_SHA=${{ needs.prepare.outputs.commit }}
 
       - name: Attest image provenance
         uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2

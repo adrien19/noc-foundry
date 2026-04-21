@@ -6,7 +6,6 @@ on:
       - main
 
 permissions:
-  actions: write
   contents: write
   issues: write
   pull-requests: write
@@ -15,21 +14,8 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - name: Run Release Please
-        id: release
         uses: googleapis/release-please-action@c3fc4de07084f75a2b61a5b933069bda6edf3d5c # v4
         with:
           config-file: .github/release-please-config.json
           manifest-file: .release-please-manifest.json
-
-      - name: Dispatch release artifacts workflow
-        if: ${{ steps.release.outputs.release_created == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag_name }}
-        run: |
-          set -euo pipefail
-          gh workflow run release-artifacts.yml --ref "${GITHUB_REF_NAME}" -f tag="${TAG}"
