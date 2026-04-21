@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/adrien19/noc-foundry/compare/v0.3.0...v0.4.0) (2026-04-21)
+
+
+### Features
+
+* **schemas:** add Git repository source for YANG models ([b064b97](https://github.com/adrien19/noc-foundry/commit/b064b975e2cb7c08c2bdb3cb3f8d795c98c134d0))
+* **schemas:** add Git repository source for YANG models ([5a0ddc3](https://github.com/adrien19/noc-foundry/commit/5a0ddc360c0510fe25298610affd3d96ad3b8ef3))
+
+
+### Bug Fixes
+
+* **release:** dispatch artifact publishing after release please ([#23](https://github.com/adrien19/noc-foundry/issues/23)) ([1a7b4a3](https://github.com/adrien19/noc-foundry/commit/1a7b4a3ad3394e40e9d5d67a04f6c976f3f8b281))
+
 ## [0.3.0](https://github.com/adrien19/noc-foundry/compare/v0.2.0...v0.3.0) (2026-04-13)
 
 
